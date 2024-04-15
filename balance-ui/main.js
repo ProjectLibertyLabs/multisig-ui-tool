@@ -1,59 +1,30 @@
 import { checkAddress, encodeAddress } from "https://cdn.jsdelivr.net/npm/@polkadot/util-crypto@12.6.2/+esm";
-import { loadApi, initConnection, getCurrentRelayChainBlockNumber, toDecimalUnit, getPrefix, getUnit } from "../api.js";
+import { web3Enable, web3FromAddress } from "https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.46.9/+esm";
+import {
+  loadApi,
+  initConnection,
+  getCurrentRelayChainBlockNumber,
+  toDecimalUnit,
+  getPrefix,
+  getUnit,
+  getBalance,
+  hasSuccess,
+  getProviderUrl,
+} from "../api.js";
 import { setUrlParameter, getParameterByName } from "../url.js";
+import { displaySchedule, sortSchedule } from "../schedule.js";
+import { inProgress } from "../progress.js";
 
-let loggedAccountData = {};
-
-// Simple display of a new log
-function addLog(msg, prefix) {
-  prefix = prefix ? prefix + ": " : "";
-  if (typeof msg === "string") {
-    msg = [msg];
+async function updateData(lookupAddress) {
+  document.getElementById("currentResults").style.display = "none";
+  if (!lookupAddress) {
+    return;
   }
+  if (!validateAddress(lookupAddress)) return;
+  const account = encodeAddress(lookupAddress, getPrefix());
 
-  const li = document.createElement("li");
-  const ul = document.createElement("ul");
-
-  let head = msg.shift();
-  li.innerHTML = `${new Date().toLocaleString()} - ${prefix}${head}`;
-
-  while ((head = msg.shift())) {
-    const liHead = document.createElement("li");
-    liHead.innerHTML = head;
-    ul.append(liHead);
-  }
-
-  li.append(ul);
-
-  document.getElementById("log").prepend(li);
-}
-
-function displaySchedule(schedule, relayBlockNumber) {
-  if (schedule.periodCount > 1) {
-    const unsupported = document.createElement("span");
-    unsupported.innerHTML = "Unsupported per period value";
-    return unsupported;
-  }
-  const template = document.querySelector("#schedule-template");
-  const scheduleEl = template.content.cloneNode(true);
-  scheduleEl.querySelector(".balanceResultTokens").innerHTML =
-    toDecimalUnit(schedule.perPeriod.toString()) + " " + getUnit();
-  const unlockRelayBlock = schedule.start.toNumber() + schedule.period.toNumber();
-  scheduleEl.querySelector(".unlockRelayBlock").innerHTML = unlockRelayBlock.toLocaleString();
-
-  const untilUnlock = (unlockRelayBlock - relayBlockNumber) * 6 * 1000;
-  const unlockEstimate = new Date(Date.now() + untilUnlock);
-  scheduleEl.querySelector(".estimatedUnlock").innerHTML = unlockEstimate.toLocaleString();
-
-  return scheduleEl;
-}
-
-function sortSchedule(a, b) {
-  return Math.sign(a.start.toNumber() + a.period.toNumber() - (b.start.toNumber() + b.period.toNumber()));
-}
-
-async function updateResults(account, balanceData) {
   const api = await loadApi();
+  const balanceData = await getBalance(account);
 
   const resultSchedule = document.getElementById("timeReleaseSchedule");
   resultSchedule.innerHTML = "Loading...";
@@ -61,8 +32,7 @@ async function updateResults(account, balanceData) {
   document.getElementById("resultAddress").innerHTML = account;
   document.getElementById("resultBalanceTokens").innerHTML = balanceData.decimal + " " + getUnit();
   document.getElementById("resultBalancePlancks").innerHTML = balanceData.plancks;
-  document.getElementById("resultReserved").innerHTML = balanceData.reserved;
-  document.getElementById("currentResults").style.display = "block";
+  document.getElementById("resultReserved").innerHTML = balanceData.frozen;
 
   // Look up the timeRelease Pallet information for the address
   const schedules = await api.query.timeRelease.releaseSchedules(account);
@@ -72,16 +42,16 @@ async function updateResults(account, balanceData) {
   } else {
     const relayBlockNumber = await getCurrentRelayChainBlockNumber();
     const ul = document.createElement("ul");
+    resultSchedule.innerHTML = "";
 
     const isUnlocked = (s) =>
       s.periodCount.toNumber() === 1 && s.start.toNumber() + s.period.toNumber() < relayBlockNumber;
-
-    const unlockedSum = schedules.filter(isUnlocked).reduce((sum, s) => sum + BigInt(s.perPeriod.toString()), 0n);
+    const unlockedSum = schedules.reduce((sum, s) => (isUnlocked(s) ? sum + s.perPeriod.toBigInt() : sum), 0n);
 
     if (unlockedSum > 0n) {
-      const unlockLi = document.createElement("li");
-      unlockLi.innerHTML = `<b>Ready to Claim:</b> ${toDecimalUnit(unlockedSum)} ${getUnit()}`;
-      ul.append(unlockLi);
+      const unlockDiv = document.createElement("div");
+      unlockDiv.innerHTML = `<button id="claimButton">Claim Unlocked Tokens Now</button><br /><b>Ready to Claim:</b> ${toDecimalUnit(unlockedSum)} ${getUnit()}`;
+      resultSchedule.append(unlockDiv);
     }
 
     schedules
@@ -89,40 +59,13 @@ async function updateResults(account, balanceData) {
       .sort(sortSchedule)
       .forEach((s) => {
         const li = document.createElement("li");
-        li.append(displaySchedule(s, relayBlockNumber));
+        li.append(displaySchedule(s, null, relayBlockNumber));
         ul.append(li);
       });
-    resultSchedule.innerHTML = "";
     resultSchedule.append(ul);
   }
-}
 
-async function logBalance(lookupAddress) {
-  const api = await loadApi();
-  document.getElementById("currentResults").style.display = "none";
-  if (!api || !lookupAddress) {
-    return;
-  }
-  if (!validateAddress(lookupAddress)) return;
-
-  const resp = await api.query.system.account(lookupAddress);
-  const account = encodeAddress(lookupAddress, getPrefix());
-  const total = BigInt(resp.data.free.toJSON()) + BigInt(resp.data.reserved.toJSON());
-
-  const balanceData = {
-    decimal: toDecimalUnit(total),
-    plancks: BigInt(total).toLocaleString(),
-    free: resp.data.free.toHuman(),
-    reserved: resp.data.reserved.toHuman(),
-  };
-
-  await updateResults(account, balanceData);
-
-  loggedAccountData[account] = balanceData;
-
-  const msg = Object.entries(balanceData).map(([k, v]) => `${k}: ${v}`);
-
-  addLog(["", ...msg], account);
+  document.getElementById("currentResults").style.display = "block";
 }
 
 // Check the address and add a error message if there is one
@@ -140,24 +83,75 @@ function validateAddress(address, element = null) {
   return isValid;
 }
 
-// Simple function to allow getting data out into a spreadsheet paste-able form
-function copyToSpreadsheet() {
-  let first = true;
-  const list = Object.entries(loggedAccountData).flatMap(([k, v]) => {
-    const row = [k, ...Object.values(v)];
-    if (first) {
-      first = false;
-      const header = ["address", ...Object.keys(v)];
-      return [header, row];
-    }
-    return [row];
-  });
-  navigator.clipboard.writeText(list.map((x) => x.join("\t")).join("\n"));
-  document.getElementById("copyToSpreadsheet").innerHTML = "Copied!";
-  setTimeout(() => {
-    document.getElementById("copyToSpreadsheet").innerHTML = "Copy to Spreadsheet";
-  }, 2000);
+// Do the actual claim
+async function claim(event, sender) {
+  event.preventDefault();
+  const addressCheck = checkAddress(sender, getPrefix());
+  if (!addressCheck[0]) {
+    alert(`Address invalid: ${addressCheck[1] || "unknown"}`);
+    return;
+  }
+
+  inProgress(true, ".loader", null, event.target.id);
+
+  const api = await loadApi();
+  try {
+    await web3Enable("Balance Check dApp");
+    const claimCall = api.tx.timeRelease.claim();
+    const injector = await web3FromAddress(sender);
+
+    const sending = claimCall.signAndSend(
+      sender,
+      { signer: injector.signer },
+      postTransaction(document.getElementById("timeReleaseSchedule"), async () => {
+        // Wait a bit before refreshing...
+        await new Promise((r) => setTimeout(r, 2000));
+        await updateData(sender);
+        inProgress(false, ".loader", null, event.target.id);
+      }),
+    );
+    await sending;
+  } catch (e) {
+    alert(`ERROR: ${e.toString()}`);
+    inProgress(false, ".loader", null, event.target.id);
+  }
 }
+
+// Function for after the transaction has been submitted
+const postTransaction = (section, completeFn) => async (status) => {
+  let msg;
+
+  if (typeof status === "string") {
+    msg = status;
+  } else if (status.isInBlock) {
+    msg = "In Block";
+  } else if (status.isFinalized) {
+    const finalizedBlock = status.status.asFinalized.toHuman();
+    if (hasSuccess(status)) {
+      msg = `Finalized: <a target="_blank" title="Block Details" href="https://polkadot.js.org/apps/?rpc=${getProviderUrl()}#/explorer/query/${finalizedBlock}">${finalizedBlock}</a>`;
+      await completeFn();
+    } else {
+      msg = `<span style="color: red; font-weight: bold;">POSSIBLE ERROR!!</span> Please check finalized block: <a target="_blank" title="Block Details" href="https://polkadot.js.org/apps/?rpc=${getProviderUrl()}#/explorer/query/${finalizedBlock}">${finalizedBlock}</a>`;
+      msg += "<br />";
+      msg += printEvents(status);
+      await completeFn();
+    }
+  } else if (status.isError) {
+    msg = `<span style="color: red;">Error</span>: ${status.status.toHuman()}`;
+    await completeFn();
+  } else if (status.status.isReady) {
+    msg = "Sent";
+  } else if (status.status.isBroadcast) {
+    msg = "Broadcast";
+  } else {
+    msg =
+      typeof status.status.toHuman() === "string" ? status.status.toHuman() : JSON.stringify(status.status.toHuman());
+  }
+
+  const p = document.createElement("p");
+  p.innerHTML = new Date().toLocaleString() + ": " + msg;
+  section.prepend(p);
+};
 
 // Post node connection, set the lookupAddress if there is one
 function postConnect() {
@@ -171,18 +165,16 @@ function init() {
   lookupAddressEl.addEventListener("input", () => {
     validateAddress(lookupAddressEl.value, lookupAddressEl);
   });
+  // Watch for the claim button
+  document.getElementById("timeReleaseSchedule").addEventListener("click", (e) => {
+    if (e.target.id === "claimButton") claim(e, document.getElementById("resultAddress").innerHTML);
+  });
   document.getElementById("balanceForm").addEventListener("submit", (e) => {
     e.preventDefault();
-    logBalance(lookupAddressEl.value);
+    updateData(lookupAddressEl.value);
     setUrlParameter("address", lookupAddressEl.value);
-    lookupAddressEl.value = "";
   });
-  document.getElementById("copyToSpreadsheet").addEventListener("click", copyToSpreadsheet);
 
-  document.getElementById("clearLog").addEventListener("click", () => {
-    document.getElementById("log").innerHTML = "";
-    loggedAccountData = {};
-  });
   initConnection(postConnect);
 }
 

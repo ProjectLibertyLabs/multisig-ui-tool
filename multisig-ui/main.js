@@ -1,97 +1,38 @@
 import {
   blake2AsHex,
-  checkAddress,
   decodeAddress,
   encodeAddress,
-  createKeyMulti,
 } from "https://cdn.jsdelivr.net/npm/@polkadot/util-crypto@12.6.2/+esm";
-import {
-  web3Accounts,
-  web3Enable,
-  web3FromAddress,
-} from "https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.46.9/+esm";
+import { web3Enable, web3FromAddress } from "https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.46.9/+esm";
 import {
   loadApi,
   getIsConnected,
   initConnection,
-  toDecimalUnit,
+  getBalance,
   getPrefix,
   getProviderUrl,
   getUnit,
   getCurrentRelayChainBlockNumber,
+  hasSuccess,
 } from "../api.js";
 import { getParameterByName, setUrlParameter } from "../url.js";
-
-// Simple loading and button blocker
-function inProgress(isInProgress) {
-  const spinners = document.querySelectorAll(".connectionLoader");
-  const submitButton = document.getElementById("submitForm");
-  if (isInProgress) {
-    submitButton.disabled = true;
-    spinners.forEach((x) => (x.style.display = "block"));
-  } else {
-    submitButton.disabled = false;
-    spinners.forEach((x) => (x.style.display = "none"));
-  }
-  document.querySelectorAll(".hideProcessing").forEach((e) => (e.style.display = isInProgress ? "none" : "block"));
-}
-
-function displaySchedule(schedule, destination, relayBlockNumber) {
-  if (schedule.periodCount > 1) {
-    const unsupported = document.createElement("span");
-    unsupported.innerHTML = "Unsupported per period value";
-    return unsupported;
-  }
-  const template = document.querySelector("#schedule-template");
-  const scheduleEl = template.content.cloneNode(true);
-  scheduleEl.querySelector(".balanceResultTokens").innerHTML =
-    toDecimalUnit(schedule.perPeriod.toString()) + " " + getUnit();
-  const unlockRelayBlock = schedule.start + schedule.period;
-  scheduleEl.querySelector(".unlockRelayBlock").innerHTML = unlockRelayBlock.toLocaleString();
-
-  const untilUnlock = (unlockRelayBlock - relayBlockNumber) * 6 * 1000;
-  const unlockEstimate = new Date(Date.now() + untilUnlock);
-  scheduleEl.querySelector(".estimatedUnlock").innerHTML = unlockEstimate.toLocaleString();
-
-  scheduleEl.querySelector(".destination").innerHTML = destination;
-
-  return scheduleEl;
-}
+import { inProgress } from "../progress.js";
+import { displaySchedule } from "../schedule.js";
+import { AddressError, getAccounts, getMultisigAddress } from "../wallet.js";
 
 function multisigProcess(showError = false) {
   const element = document.getElementById("multisigSignatories");
   element.setCustomValidity("");
-  const multisigThreshold = parseInt(document.getElementById("multisigThreshold").value);
-  const multisigSignatories = document
-    .getElementById("multisigSignatories")
-    .value.split("\n")
-    .map((x) => x.trim())
-    .filter((x) => !!x);
-  if (multisigThreshold > multisigSignatories.length) {
-    if (showError) element.setCustomValidity(`Multisig setup is invalid. Wrong threshold or bad signatories.`);
-    return null;
-  }
   try {
-    for (const signatory of multisigSignatories) {
-      try {
-        const check = checkAddress(encodeAddress(signatory, getPrefix()), getPrefix());
-        if (!check[0]) {
-          if (showError)
-            element.setCustomValidity(`Signatory address "${signatory}" is invalid: ${check[1] || "unknown"}`);
-          return null;
-        }
-      } catch (e) {
-        if (showError)
-          element.setCustomValidity(`Signatory address "${signatory}" is invalid: ${e.message || "unknown"}`);
-        return null;
-      }
-    }
-
-    const multisigAddress = encodeAddress(createKeyMulti(multisigSignatories, multisigThreshold), getPrefix());
-    return [multisigAddress, multisigThreshold, multisigSignatories.map((a) => encodeAddress(a, getPrefix()))];
+    return getMultisigAddress(getPrefix());
   } catch (e) {
-    if (showError)
+    if (!showError) {
+      console.error("Multisig Error", e);
+    } else if (e instanceof AddressError) {
+      element.setCustomValidity(e.message);
+    } else {
       element.setCustomValidity(`Multisig setup is invalid. Wrong threshold or bad signatories: ${e.toString()}`);
+    }
     return null;
   }
 }
@@ -124,12 +65,12 @@ async function pendingTransactionUpdate(tx, el) {
     "focusout",
     async (input) => {
       const value = input.target.value;
-      inProgress(true);
+      inProgress(true, ".connectionLoader", ".hideProcessing", "submitForm");
       const callData = value ? [processRawCallData(value)] : [];
       const newTx = await processMultisigEntry(callData)(tx.original);
       await pendingTransactionUpdate(newTx, input.target.closest(".pending-multisig"));
       updateUrlCallData();
-      inProgress(false);
+      inProgress(false, ".connectionLoader", ".hideProcessing", "submitForm");
     },
     { once: true },
   );
@@ -156,9 +97,10 @@ async function pendingTransactionUpdate(tx, el) {
   const signingSection = el.querySelector(".signingSection");
   const walletAddressNotFound = el.querySelector(".walletAddressNotFound");
   // Filter to just accounts in the wallet and ones that have not signed it
-  const walletSigningAccounts = (await getAccounts(true)).filter(
+  const walletSigningAccounts = (await getAccounts(getPrefix(), true)).filter(
     (x) => isApproved || !approvedAddresses.includes(x.address),
   );
+
   if (walletSigningAccounts.length > 0) {
     const sender = walletSigningAccounts[0].address;
     const buttonExe = signingSection.querySelector(".countersignExe");
@@ -199,12 +141,6 @@ const multisigSort = (a, b) => {
     if (decodedA[i] > decodedB[i]) return 1;
   }
   return 0;
-};
-
-const hasSuccess = (status) => {
-  const events = status.events.map((x) => x.toHuman());
-  const success = events.find((x) => x.event.method === "ExtrinsicSuccess");
-  return !!success;
 };
 
 function printEventData(data) {
@@ -309,7 +245,7 @@ async function signTransaction(section, sender, txHash, timepoint, callData) {
 }
 
 async function processSubmission() {
-  inProgress(true);
+  inProgress(true, ".connectionLoader", ".hideProcessing", "submitForm");
   const pendingTransactions = document.getElementById("pendingTransactions");
   pendingTransactions.innerHTML = "Loading...";
 
@@ -318,15 +254,15 @@ async function processSubmission() {
   const multisigResult = multisigProcess(false);
   if (multisigResult === null) {
     pendingTransactions.innerHTML = "...";
-    inProgress(false);
+    inProgress(false, ".connectionLoader", ".hideProcessing", "submitForm");
     return;
   }
 
   const [multisigAddress, _multisigThreshold, _multisigSignatories] = multisigResult;
 
-  document.getElementById("resultAddress").innerHTML = multisigAddress;
+  document.getElementById("multisigAddress").innerHTML = multisigAddress;
 
-  const balanceData = await getBalanceNoChecks(multisigAddress);
+  const balanceData = await getBalance(multisigAddress);
 
   const transactions = await getPendingMultisigTransactions(multisigAddress);
 
@@ -341,22 +277,8 @@ async function processSubmission() {
 
   document.getElementById("resultBalanceTokens").innerHTML = balanceData.decimal + " " + getUnit();
   document.getElementById("resultBalancePlancks").innerHTML = balanceData.plancks;
-  document.getElementById("resultReserved").innerHTML = balanceData.reserved;
-  inProgress(false);
-}
-
-async function getBalanceNoChecks(lookupAddress) {
-  const api = await loadApi();
-
-  const resp = await api.query.system.account(lookupAddress);
-  const total = BigInt(resp.data.free.toJSON()) + BigInt(resp.data.reserved.toJSON());
-
-  return {
-    decimal: toDecimalUnit(total),
-    plancks: BigInt(total).toLocaleString(),
-    free: resp.data.free.toHuman(),
-    reserved: resp.data.reserved.toHuman(),
-  };
+  document.getElementById("resultReserved").innerHTML = balanceData.frozen;
+  inProgress(false, ".connectionLoader", ".hideProcessing", "submitForm");
 }
 
 const processRawCallData = (cd) => ({
@@ -409,26 +331,10 @@ async function getPendingMultisigTransactions(address) {
   return result;
 }
 
-let cachedAccounts = null;
-let cachedAccountsMs = null;
-const getAccounts = async (multisigCheck = false) => {
-  if (!cachedAccounts) cachedAccounts = await web3Accounts();
-
-  if (!multisigCheck) return cachedAccounts;
-  if (cachedAccountsMs) return cachedAccountsMs;
-
-  const addresses = multisigProcess(false);
-
-  if (!addresses || !addresses[2]) return [];
-
-  const msSet = new Set(addresses[2].map((x) => encodeAddress(x, getPrefix())));
-  return (cachedAccountsMs = cachedAccounts.filter((x) => msSet.has(encodeAddress(x.address, getPrefix()))));
-};
-
 // Post node connection, connect to the wallet
 async function postConnect() {
   await web3Enable("Multisig dApp");
-  await getAccounts();
+  await getAccounts(getPrefix());
   setFromUrl();
 }
 

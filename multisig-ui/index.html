@@ -63,6 +63,7 @@
         position: relative;
         animation: flash 1s ease-out infinite alternate;
         margin-left: 90px;
+        display: none;
       }
 
       @keyframes flash {
@@ -170,18 +171,20 @@
     </form>
     <span style="margin: 2rem" class="loader connectionLoader"></span>
     <section id="currentResults" class="hideProcessing">
-      <h2>Address: <span id="resultAddress"></span></h2>
+      <h2>Address: <span id="multisigAddress"></span></h2>
       <dl>
         <dt>Balance</dt>
         <dd id="resultBalanceTokens">...</dd>
         <dt>Balance (Plancks)</dt>
         <dd id="resultBalancePlancks">...</dd>
-        <dt>Reserved</dt>
+        <dt>Reserved/Frozen</dt>
         <dd id="resultReserved">...</dd>
       </dl>
       <h3>Pending Multisig Transactions</h3>
       <div id="pendingTransactions">...</div>
     </section>
+    <br style="clear: both" />
+    <div class=""><a href="../">See All Tools</a></div>
     <script type="module" src="./main.js"></script>
   </body>
 </html>

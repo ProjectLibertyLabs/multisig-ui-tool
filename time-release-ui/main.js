@@ -1,6 +1,5 @@
 import {
   checkAddress,
-  createKeyMulti,
   encodeAddress,
   blake2AsHex,
   decodeAddress,
@@ -21,11 +20,17 @@ import {
   getProviderUrl,
   getPendingMultisigs,
 } from "../api.js";
-
-// Simple place to dump log data that is then able to be sent to a clipboard
-let loggedData = {};
-// Key of what was most recently logged
-let lastKeyInLoggedData = null;
+import {
+  inProgress,
+  copyToSpreadsheet,
+  addLog,
+  addLogData,
+  updateLogData,
+  clearLog,
+  callHashToTxHash,
+} from "../progress.js";
+import { displaySchedule } from "../schedule.js";
+import { getMultisigAddress, AddressError } from "../wallet.js";
 
 // Sort addresses by hex.
 const multisigSort = (a, b) => {
@@ -54,10 +59,9 @@ async function updateSenderBalance() {
 }
 
 // Update the multisig balance display
-async function updateMultisigBalance() {
+async function updateMultisigBalance(sender) {
   const balanceDisplay = document.getElementById("multisigBalance");
   balanceDisplay.innerHTML = "...";
-  const sender = document.getElementById("multisigAddress").value;
   const api = await loadApi();
   if (!api || !sender) {
     return;
@@ -66,28 +70,6 @@ async function updateMultisigBalance() {
   const balance = resp.data.free.toString();
 
   balanceDisplay.innerHTML = toDecimalUnit(balance);
-}
-
-function displaySchedule(schedule, destination, relayBlockNumber) {
-  if (schedule.periodCount > 1) {
-    const unsupported = document.createElement("span");
-    unsupported.innerHTML = "Unsupported per period value";
-    return unsupported;
-  }
-  const template = document.querySelector("#schedule-template");
-  const scheduleEl = template.content.cloneNode(true);
-  scheduleEl.querySelector(".balanceResultTokens").innerHTML =
-    toDecimalUnit(schedule.perPeriod.toString()) + " " + getUnit();
-  const unlockRelayBlock = schedule.start + schedule.period;
-  scheduleEl.querySelector(".unlockRelayBlock").innerHTML = unlockRelayBlock.toLocaleString();
-
-  const untilUnlock = (unlockRelayBlock - relayBlockNumber) * 6 * 1000;
-  const unlockEstimate = new Date(Date.now() + untilUnlock);
-  scheduleEl.querySelector(".estimatedUnlock").innerHTML = unlockEstimate.toLocaleString();
-
-  scheduleEl.querySelector(".destination").innerHTML = destination;
-
-  return scheduleEl;
 }
 
 async function pendingTransactionUpdate(tx, el) {
@@ -123,12 +105,12 @@ async function updateMultisigPending() {
   if (isMultisig) {
     const pendingTransactions = document.getElementById("multisigPending");
     pendingTransactions.innerHTML = "...";
-    const sender = document.getElementById("multisigAddress").value;
+    const multisigAddress = document.getElementById("multisigAddress").value;
     const api = await loadApi();
-    if (!api || !sender) {
+    if (!api || !multisigAddress) {
       return;
     }
-    const transactions = await getPendingMultisigs(sender);
+    const transactions = await getPendingMultisigs(multisigAddress);
 
     if (transactions.length > 0) {
       pendingTransactions.innerHTML = "";
@@ -147,7 +129,7 @@ async function updateBlockNumber(date) {
   estimateDisplay.value = null;
   const link = document.getElementById("subscanLink");
   link.style.display = "none";
-  inProgress(true);
+  inProgress(true, "loader", null, "createTransferButton");
 
   if (!(date instanceof Date)) {
     date = new Date(Date.parse(document.getElementById("unlockDate").value));
@@ -155,7 +137,7 @@ async function updateBlockNumber(date) {
 
   // Reject old dates and bad dates
   if (!date || date < Date.now() || !getIsConnected()) {
-    inProgress(false);
+    inProgress(false, "loader", null, "createTransferButton");
     return;
   }
 
@@ -180,7 +162,7 @@ async function updateBlockNumber(date) {
 
   link.href = `${url[getPrefix()]}${actualBlockNumber}`;
   link.style.display = "block";
-  inProgress(false);
+  inProgress(false, "loader", null, "createTransferButton");
 
   return actualBlockNumber;
 }
@@ -223,39 +205,25 @@ function populateFromPaste(data) {
 function multisigProcess(doAlert = false) {
   document.getElementById("multisigAddress").value = "...";
   document.getElementById("multisigBalance").innerHTML = "...";
-  const isMultisig = document.getElementById("multisigCheckbox").checked;
-  const multisigThreshold = parseInt(document.getElementById("multisigThreshold").value);
-  const senderAddress = document.getElementById("sender").value;
-  const multisigSignatories = document
-    .getElementById("multisigSignatories")
-    .value.split("\n")
-    .map((x) => x.trim())
-    .filter((x) => !!x)
-    .filter((x) => x !== senderAddress);
-  if (senderAddress) multisigSignatories.push(senderAddress);
 
-  if (isMultisig) {
-    if (multisigThreshold > multisigSignatories.length) {
-      if (doAlert) alert(`Multisig setup is invalid. Wrong threshold or bad signatories.`);
-      return;
-    }
-    try {
-      multisigSignatories.forEach((signatory) => {
-        const check = checkAddress(signatory, getPrefix());
-        if (!check[0]) {
-          if (doAlert) alert(`Signatory address "${signatory}" is invalid: ${check[1] || "unknown"}`);
-        }
-      });
+  if (!document.getElementById("multisigCheckbox").checked) return;
 
-      const multisigAddress = encodeAddress(createKeyMulti(multisigSignatories, multisigThreshold), getPrefix());
-      document.getElementById("multisigAddress").value = multisigAddress;
-      updateMultisigBalance();
-      updateMultisigPending();
-      return [multisigAddress, multisigThreshold, multisigSignatories];
-    } catch (e) {
-      if (doAlert) alert(`Multisig setup is invalid. Wrong threshold or bad signatories: ${e.toString()}`);
-      return;
+  try {
+    const addresses = getMultisigAddress(getPrefix());
+    const [multisigAddress] = addresses;
+    document.getElementById("multisigAddress").value = multisigAddress;
+    updateMultisigBalance(multisigAddress);
+    updateMultisigPending();
+    return addresses;
+  } catch (e) {
+    if (!doAlert) {
+      console.error("Multisig Error", e);
+    } else if (e instanceof AddressError) {
+      alert(e.message);
+    } else {
+      alert(`Multisig setup is invalid. Wrong threshold or bad signatories: ${e.toString()}`);
     }
+    return null;
   }
 }
 
@@ -273,7 +241,7 @@ async function createTransfer(event) {
     return;
   }
 
-  inProgress(true);
+  inProgress(true, "loader", null, "createTransferButton");
 
   const isMultisig = document.getElementById("multisigCheckbox").checked;
 
@@ -312,7 +280,7 @@ async function createTransfer(event) {
 
       const tx = api.tx.multisig.asMulti(multisigThreshold, sortedOthers, null, transferCall, maxWeight);
       const sending = tx.signAndSend(sender, { signer: injector.signer }, postTransaction(txLabel, callHash));
-      loggedData[callHash] = {
+      addLogData(callHash, {
         recipient,
         amount: amount.toLocaleString(),
         sender: multisigAddress,
@@ -321,8 +289,7 @@ async function createTransfer(event) {
         callData,
         status: "Sending",
         finalizedBlock: "unknown",
-      };
-      lastKeyInLoggedData = callHash;
+      });
       addLog(
         [
           `Sending time release`,
@@ -337,7 +304,7 @@ async function createTransfer(event) {
       await sending;
     } else {
       const sending = transferCall.signAndSend(sender, { signer: injector.signer }, postTransaction(txLabel, callHash));
-      loggedData[callHash] = {
+      addLogData(callHash, {
         recipient,
         amount: amount.toLocaleString(),
         sender,
@@ -346,8 +313,7 @@ async function createTransfer(event) {
         callData,
         status: "Sending",
         finalizedBlock: "unknown",
-      };
-      lastKeyInLoggedData = callHash;
+      });
       addLog(
         [
           `Sending time release`,
@@ -362,7 +328,7 @@ async function createTransfer(event) {
     }
   } catch (e) {
     addLog(e.toString(), `${txLabel} ERROR`);
-    inProgress(false);
+    inProgress(false, "loader", null, "createTransferButton");
   }
 }
 
@@ -402,23 +368,17 @@ function printEvents(status) {
 // Function for after the transaction has been submitted
 const postTransaction = (prefix, callHash) => (status) => {
   const txHash = status.txHash.toHex();
-  // Move it over to the txHash
-  if (loggedData[callHash]) {
-    loggedData[txHash] = loggedData[callHash];
-    delete loggedData[callHash];
-    lastKeyInLoggedData = txHash;
-  }
+  callHashToTxHash(callHash, txHash);
   // Log the transaction status
   if (status.isInBlock) {
     addLog(
       `Transaction <code>${txHash}</code> included at block hash <code>${status.status.asInBlock.toHuman()}</code>`,
       prefix,
     );
-    loggedData[txHash]["status"] = "In Block";
+    updateLogData(txHash, "In Block");
   } else if (status.isFinalized) {
     const finalizedBlock = status.status.asFinalized.toHuman();
-    loggedData[txHash]["status"] = "Finalized";
-    loggedData[txHash]["finalizedBlock"] = finalizedBlock;
+    updateLogData(txHash, "Finalized", finalizedBlock);
     const finalizedBlockMsg = `<a target="_blank" title="Block Details" href="https://polkadot.js.org/apps/?rpc=${getProviderUrl()}#/explorer/query/${finalizedBlock}"><code>${finalizedBlock}</code></a>`;
     if (hasSuccess(status)) {
       addLog(`Transaction <code>${txHash}</code> <b>finalized</b> at block hash ${finalizedBlockMsg}`, prefix);
@@ -429,19 +389,19 @@ const postTransaction = (prefix, callHash) => (status) => {
         prefix,
       );
     }
-    inProgress(false);
+    inProgress(false, "loader", null, "createTransferButton");
   } else if (status.isError) {
     addLog(`Transaction error: ${status.status.toHuman()}`, prefix);
-    loggedData[txHash]["status"] = `Error: ${status.status.toHuman()}`;
-    inProgress(false);
+    updateLogData(txHash, `Error: ${status.status.toHuman()}`);
+    inProgress(false, "loader", null, "createTransferButton");
   } else if (status.status.isReady) {
-    loggedData[txHash]["status"] = "Sent";
+    updateLogData(txHash, "Sent");
   } else if (status.status.isBroadcast) {
-    loggedData[txHash]["status"] = "Broadcast";
+    updateLogData(txHash, "Broadcast");
   } else {
     const msg =
       typeof status.status.toHuman() === "string" ? status.status.toHuman() : JSON.stringify(status.status.toHuman());
-    loggedData[txHash]["status"] = msg;
+    updateLogData(txHash, msg);
     addLog(`Transaction status: ${msg}`, prefix);
   }
 };
@@ -469,74 +429,6 @@ async function postConnect() {
     senderSelect.add(option);
   }
   triggerUpdates();
-}
-
-// Simple display of a new log
-function addLog(msg, prefix) {
-  prefix = prefix ? prefix + ": " : "";
-  if (typeof msg === "string") {
-    msg = [msg];
-  }
-
-  const li = document.createElement("li");
-  const ul = document.createElement("ul");
-
-  let head = msg.shift();
-  li.innerHTML = `${new Date().toLocaleString()} - ${prefix}${head}`;
-
-  while ((head = msg.shift())) {
-    const liHead = document.createElement("li");
-    liHead.innerHTML = head;
-    ul.append(liHead);
-  }
-
-  li.append(ul);
-
-  document.getElementById("log").prepend(li);
-}
-
-// Simple function to allow getting data out into a spreadsheet paste-able form
-const copyToSpreadsheet =
-  (type = "all") =>
-  () => {
-    let first = true;
-    let logData = [];
-    let elId = "copyToSpreadsheet";
-    if (type === "last") {
-      first = false;
-      logData = lastKeyInLoggedData && loggedData[lastKeyInLoggedData] ? [loggedData[lastKeyInLoggedData]] : [];
-      elId = "copyToSpreadsheetLast";
-    } else {
-      logData = Object.values(loggedData);
-    }
-    const list = logData.flatMap((v) => {
-      const row = Object.values(v);
-      if (first) {
-        first = false;
-        const header = Object.keys(v);
-        return [header, row];
-      }
-      return [row];
-    });
-    navigator.clipboard.writeText(list.map((x) => x.join("\t")).join("\n"));
-    const label = document.getElementById(elId).innerHTML;
-    document.getElementById(elId).innerHTML = "Copied!";
-    setTimeout(() => {
-      document.getElementById(elId).innerHTML = label;
-    }, 2000);
-  };
-
-// Simple loading and button blocker
-function inProgress(isInProgress) {
-  const spinner = document.getElementById("txProcessing");
-  const submitButton = document.getElementById("createTransferButton");
-  if (isInProgress) {
-    submitButton.disabled = true;
-    spinner.style.display = "block";
-  } else {
-    submitButton.disabled = false;
-    spinner.style.display = "none";
-  }
 }
 
 // Update the various derived values from fields
@@ -589,11 +481,7 @@ function init() {
   document.getElementById("multisigThreshold").addEventListener("input", () => multisigProcess(false));
   document.getElementById("copyToSpreadsheet").addEventListener("click", copyToSpreadsheet("all"));
   document.getElementById("copyToSpreadsheetLast").addEventListener("click", copyToSpreadsheet("last"));
-  document.getElementById("clearLog").addEventListener("click", () => {
-    document.getElementById("log").innerHTML = "";
-    loggedData = {};
-    lastKeyInLoggedData = null;
-  });
+  document.getElementById("clearLog").addEventListener("click", clearLog);
   initConnection(postConnect);
 }
 

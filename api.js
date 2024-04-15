@@ -158,22 +158,14 @@ export async function getPendingMultisigs(address) {
 
       const blockHash = await api.rpc.chain.getBlockHash(entryData.when.height);
       const signedBlock = await api.rpc.chain.getBlock(blockHash);
-      const tx = signedBlock.block.extrinsics[entryData.when.index]
-        ? signedBlock.block.extrinsics[entryData.when.index].toHuman()
-        : null;
+      const innerCallTx = signedBlock.block.extrinsics[entryData.when.index]?.method?.args[3] || null;
+      const innerCall = innerCallTx.toHuman();
 
-      if (
-        !tx ||
-        !tx.method ||
-        !tx.method.args ||
-        !tx.method.args.call ||
-        tx.method.args.call.method !== "transfer" ||
-        tx.method.args.call.section !== "timeRelease"
-      ) {
+      if (innerCall.method !== "transfer" || innerCall.section !== "timeRelease") {
         throw new Error("Unable to process original data");
       }
 
-      const { dest, schedule } = tx.method.args.call.args;
+      const { dest, schedule } = innerCall.args;
 
       return {
         hash,
@@ -186,10 +178,30 @@ export async function getPendingMultisigs(address) {
         dest: {
           id: dest.Id,
         },
-        callData: signedBlock.block.extrinsics[entryData.when.index].method.args[3].toHex(),
+        callData: innerCallTx.toHex(),
         approvals: entryData.approvals,
       };
     }),
   );
   return multisigEntries;
+}
+
+export async function getBalance(address) {
+  const api = await loadApi();
+
+  const resp = await api.query.system.account(address);
+  const total = BigInt(resp.data.free.toJSON());
+
+  return {
+    decimal: toDecimalUnit(total),
+    plancks: BigInt(total).toLocaleString(),
+    free: resp.data.free.toHuman(),
+    frozen: resp.data.frozen.toHuman(),
+  };
+}
+
+export function hasSuccess(status) {
+  const events = status.events.map((x) => x.toHuman());
+  const success = events.find((x) => x.event.method === "ExtrinsicSuccess");
+  return !!success;
 }

@@ -15,6 +15,44 @@
         margin: 0;
         padding: 0 0 0.5em 0;
       }
+
+      /* Spinner */
+      .loader {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background-color: var(--color-accent);
+        box-shadow:
+          32px 0 var(--color-accent),
+          -32px 0 var(--color-accent);
+        position: relative;
+        animation: flash 1s ease-out infinite alternate;
+        margin-left: 90px;
+        display: none;
+      }
+
+      @keyframes flash {
+        0% {
+          background-color: var(--color-link);
+          box-shadow:
+            32px 0 var(--color-link),
+            -32px 0 var(--color-accent);
+        }
+
+        50% {
+          background-color: var(--color-accent);
+          box-shadow:
+            32px 0 var(--color-link),
+            -32px 0 var(--color-link);
+        }
+
+        100% {
+          background-color: var(--color-link);
+          box-shadow:
+            32px 0 var(--color-accent),
+            -32px 0 var(--color-link);
+        }
+      }
     </style>
   </head>
 
@@ -66,20 +104,15 @@
         <dd id="resultBalanceTokens">...</dd>
         <dt>Balance (Plancks)</dt>
         <dd id="resultBalancePlancks">...</dd>
-        <dt>Reserved</dt>
+        <dt>Frozen/Reserved (Plancks)</dt>
         <dd id="resultReserved">...</dd>
       </dl>
       <h3>Time Release Unlock Schedule</h3>
+      <span class="loader"></span>
       <div id="timeReleaseSchedule">...</div>
     </section>
-
-    <details class="showConnected" style="display: none">
-      <summary>Show Log</summary>
-      <button type="button" id="copyToSpreadsheet" style="float: right">To Clipboard</button>
-      <h2>Balance Log</h2>
-      <ul id="log"></ul>
-      <button type="button" id="clearLog">Clear</button>
-    </details>
+    <br style="clear: both" />
+    <div><a href="../">See All Tools</a></div>
     <script type="module" src="./main.js"></script>
   </body>
 </html>
