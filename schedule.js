@@ -14,7 +14,7 @@ export function displaySchedule(schedule, destination, relayBlockNumber) {
   const scheduleEl = template.content.cloneNode(true);
   scheduleEl.querySelector(".balanceResultTokens").innerHTML =
     toDecimalUnit(schedule.perPeriod.toString()) + " " + getUnit();
-  const unlockRelayBlock = schedule.start.toNumber() + schedule.period.toNumber();
+  const unlockRelayBlock = schedule.start + schedule.period;
   scheduleEl.querySelector(".unlockRelayBlock").innerHTML = unlockRelayBlock.toLocaleString();
   console.log({ unlockRelayBlock, relayBlockNumber });
   const untilUnlock = (unlockRelayBlock - relayBlockNumber) * 6 * 1000;
