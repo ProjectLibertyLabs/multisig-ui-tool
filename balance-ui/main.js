@@ -25,6 +25,7 @@ async function updateData(lookupAddress) {
 
   const api = await loadApi();
   const balanceData = await getBalance(account);
+  const hasMoreThanOneTokenFree = BigInt(balanceData.free.replaceAll(",", "")) > 100_000_000n;
 
   const resultSchedule = document.getElementById("timeReleaseSchedule");
   resultSchedule.innerHTML = "Loading...";
@@ -32,6 +33,7 @@ async function updateData(lookupAddress) {
   document.getElementById("resultAddress").innerHTML = account;
   document.getElementById("resultBalanceTokens").innerHTML = balanceData.decimal + " " + getUnit();
   document.getElementById("resultBalancePlancks").innerHTML = balanceData.plancks;
+  document.getElementById("resultFree").innerHTML = balanceData.free;
   document.getElementById("resultReserved").innerHTML = balanceData.frozen;
 
   // Look up the timeRelease Pallet information for the address
@@ -50,7 +52,12 @@ async function updateData(lookupAddress) {
 
     if (unlockedSum > 0n) {
       const unlockDiv = document.createElement("div");
-      unlockDiv.innerHTML = `<button id="claimButton">Claim Unlocked Tokens Now</button><br /><b>Ready to Claim:</b> ${toDecimalUnit(unlockedSum)} ${getUnit()}`;
+      if (hasMoreThanOneTokenFree) {
+        unlockDiv.innerHTML = `<button id="claimButton">Claim Unlocked Tokens Now</button>`;
+      } else {
+        unlockDiv.innerHTML = `<button disabled title="Not enough free tokens to claim from the same account" id="claimButton">Claim Unlocked Tokens Now</button>`;
+      }
+      unlockDiv.innerHTML += `<br /><b>Ready to Claim:</b> ${toDecimalUnit(unlockedSum)} ${getUnit()}`;
       resultSchedule.append(unlockDiv);
     }
 
