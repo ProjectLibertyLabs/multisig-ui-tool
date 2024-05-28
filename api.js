@@ -170,10 +170,10 @@ export async function getPendingMultisigs(address) {
       return {
         hash,
         schedule: {
-          start: Number(schedule.start.replace(/,/g, "")),
-          perPeriod: BigInt(schedule.perPeriod.replace(/,/g, "")),
-          period: Number(schedule.period.replace(/,/g, "")),
-          periodCount: Number(schedule.periodCount.replace(/,/g, "")),
+          start: schedule.start.toNumber(),
+          perPeriod: schedule.perPeriod.toBigInt(),
+          period: schedule.period.toNumber(),
+          periodCount: schedule.periodCount.toNumber(),
         },
         dest: {
           id: dest.Id,

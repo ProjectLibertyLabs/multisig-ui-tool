@@ -1,7 +1,22 @@
 import { toDecimalUnit, getUnit } from "./api.js";
 
+export async function getSchedules(api, account) {
+  const schedules = await api.query.timeRelease.releaseSchedules(account);
+
+  if (schedules.length === 0) {
+    return [];
+  }
+
+  return schedules.map((s) => ({
+    periodCount: s.periodCount.toNumber(),
+    start: s.start.toNumber(),
+    period: s.period.toNumber(),
+    perPeriod: s.perPeriod.toBigInt(),
+  }));
+}
+
 export function sortSchedule(a, b) {
-  return Math.sign(a.start.toNumber() + a.period.toNumber() - (b.start.toNumber() + b.period.toNumber()));
+  return Math.sign(a.start + a.period - (b.start + b.period));
 }
 
 export function displaySchedule(schedule, destination, relayBlockNumber) {
@@ -14,9 +29,9 @@ export function displaySchedule(schedule, destination, relayBlockNumber) {
   const scheduleEl = template.content.cloneNode(true);
   scheduleEl.querySelector(".balanceResultTokens").innerHTML =
     toDecimalUnit(schedule.perPeriod.toString()) + " " + getUnit();
-  const unlockRelayBlock = schedule.start.toNumber() + schedule.period.toNumber();
+  const unlockRelayBlock = schedule.start + schedule.period;
   scheduleEl.querySelector(".unlockRelayBlock").innerHTML = unlockRelayBlock.toLocaleString();
-  console.log({ unlockRelayBlock, relayBlockNumber });
+
   const untilUnlock = (unlockRelayBlock - relayBlockNumber) * 6 * 1000;
   const unlockEstimate = new Date(Date.now() + untilUnlock);
   scheduleEl.querySelector(".estimatedUnlock").innerHTML = unlockEstimate.toLocaleString();

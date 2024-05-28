@@ -12,7 +12,7 @@ import {
   getProviderUrl,
 } from "../api.js";
 import { setUrlParameter, getParameterByName } from "../url.js";
-import { displaySchedule, sortSchedule } from "../schedule.js";
+import { displaySchedule, sortSchedule, getSchedules } from "../schedule.js";
 import { inProgress } from "../progress.js";
 
 async function updateData(lookupAddress) {
@@ -37,7 +37,7 @@ async function updateData(lookupAddress) {
   document.getElementById("resultReserved").innerHTML = balanceData.frozen;
 
   // Look up the timeRelease Pallet information for the address
-  const schedules = await api.query.timeRelease.releaseSchedules(account);
+  const schedules = await getSchedules(api, account);
 
   if (schedules.length === 0) {
     resultSchedule.innerHTML = "None";
@@ -46,9 +46,8 @@ async function updateData(lookupAddress) {
     const ul = document.createElement("ul");
     resultSchedule.innerHTML = "";
 
-    const isUnlocked = (s) =>
-      s.periodCount.toNumber() === 1 && s.start.toNumber() + s.period.toNumber() < relayBlockNumber;
-    const unlockedSum = schedules.reduce((sum, s) => (isUnlocked(s) ? sum + s.perPeriod.toBigInt() : sum), 0n);
+    const isUnlocked = (s) => s.periodCount === 1 && s.start + s.period < relayBlockNumber;
+    const unlockedSum = schedules.reduce((sum, s) => (isUnlocked(s) ? sum + s.perPeriod : sum), 0n);
 
     if (unlockedSum > 0n) {
       const unlockDiv = document.createElement("div");
