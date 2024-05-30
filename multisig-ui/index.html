@@ -66,6 +66,15 @@
         display: none;
       }
 
+      /* Hide unless admin */
+      .countersignCancel {
+        display: none;
+      }
+
+      .isAdmin .countersignCancel {
+        display: inline-block;
+      }
+
       @keyframes flash {
         0% {
           background-color: var(--color-link);
@@ -122,6 +131,8 @@
         </label>
         <div class="walletAddressNotFound">
           Notice: The connected wallet extension does not have any addresses that match the multisig participants.
+          <br />
+          <button class="countersign countersignCancel">Cancel Transaction</button>
         </div>
         <div class="signingSection">
           <button class="countersign countersignExe">Authorize and Execute</button>

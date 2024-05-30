@@ -128,6 +128,22 @@ async function pendingTransactionUpdate(tx, el) {
     walletAddressNotFound.style.display = "none";
   } else {
     signingSection.style.display = "none";
+
+    // Get the account that deposited
+    const depositor = (await getAccounts(getPrefix(), true)).find((x) => x.address === tx.depositor);
+
+    const buttonCancel = walletAddressNotFound.querySelector(".countersignCancel");
+    buttonCancel.dataset.txHash = tx.hash;
+    buttonCancel.dataset.isCancel = true;
+    buttonCancel.dataset.when = JSON.stringify(tx.when);
+    // Only the depsitor can cancel
+    if (!depositor) {
+      buttonCancel.disabled = true;
+      buttonCancel.setAttribute("title", `ONLY ${tx.depositor.toString()} can cancel this transaction.`);
+    } else {
+      buttonCancel.dataset.sender = depositor.address;
+      buttonCancel.setAttribute("title", `With Account: ${depositor.address}`);
+    }
     walletAddressNotFound.style.display = "block";
   }
 }
@@ -212,7 +228,7 @@ const postTransaction = (section) => (status) => {
   section.append(p);
 };
 
-async function signTransaction(section, sender, txHash, timepoint, callData) {
+async function signTransaction(section, sender, txHash, timepoint, callData, isCancel = false) {
   const api = await loadApi();
   const multisigResult = multisigProcess(false);
   if (!multisigResult) {
@@ -231,7 +247,9 @@ async function signTransaction(section, sender, txHash, timepoint, callData) {
   const injector = await web3FromAddress(sender);
 
   let tx;
-  if (callData) {
+  if (isCancel) {
+    tx = api.tx.multisig.cancelAsMulti(multisigThreshold, sortedOthers, timepoint, txHash);
+  } else if (callData) {
     tx = api.tx.multisig.asMulti(multisigThreshold, sortedOthers, timepoint, callData, maxWeight);
   } else {
     tx = api.tx.multisig.approveAsMulti(multisigThreshold, sortedOthers, timepoint, txHash, maxWeight);
@@ -369,6 +387,11 @@ function setFromUrl() {
   if (multisigSignatories) {
     document.getElementById("multisigSignatories").value = multisigSignatories.join("\n");
   }
+
+  const isAdmin = getParameterByName("admin") !== null;
+  if (isAdmin) {
+    document.getElementById("pendingTransactions").classList.add("isAdmin");
+  }
 }
 
 // Start this up with event listeners
@@ -386,10 +409,10 @@ function init() {
     e.preventDefault();
     if (!e.target.dataset.sender) return;
 
-    const { sender, txHash, callData, when } = e.target.dataset;
+    const { sender, txHash, callData, when, isCancel } = e.target.dataset;
 
-    const section = e.target.closest(".signingSection");
-    await signTransaction(section, sender, txHash, JSON.parse(when), callData);
+    const section = e.target.closest(".pending-multisig");
+    await signTransaction(section, sender, txHash, JSON.parse(when), callData, isCancel || false);
   });
 
   initConnection(postConnect);
