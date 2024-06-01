@@ -128,23 +128,23 @@ async function pendingTransactionUpdate(tx, el) {
     walletAddressNotFound.style.display = "none";
   } else {
     signingSection.style.display = "none";
-
-    // Get the account that deposited
-    const depositor = (await getAccounts(getPrefix(), true)).find((x) => x.address === tx.depositor);
-
-    const buttonCancel = walletAddressNotFound.querySelector(".countersignCancel");
-    buttonCancel.dataset.txHash = tx.hash;
-    buttonCancel.dataset.isCancel = true;
-    buttonCancel.dataset.when = JSON.stringify(tx.when);
-    // Only the depsitor can cancel
-    if (!depositor) {
-      buttonCancel.disabled = true;
-      buttonCancel.setAttribute("title", `ONLY ${tx.depositor.toString()} can cancel this transaction.`);
-    } else {
-      buttonCancel.dataset.sender = depositor.address;
-      buttonCancel.setAttribute("title", `With Account: ${depositor.address}`);
-    }
     walletAddressNotFound.style.display = "block";
+  }
+
+  // Get the account that deposited
+  const depositor = (await getAccounts(getPrefix(), true)).find((x) => x.address === tx.depositor);
+
+  const buttonCancel = el.querySelector(".countersignCancel");
+  buttonCancel.dataset.txHash = tx.hash;
+  buttonCancel.dataset.isCancel = true;
+  buttonCancel.dataset.when = JSON.stringify(tx.when);
+  // Only the depsitor can cancel
+  if (!depositor) {
+    buttonCancel.disabled = true;
+    buttonCancel.setAttribute("title", `ONLY ${tx.depositor.toString()} can cancel this transaction.`);
+  } else {
+    buttonCancel.dataset.sender = depositor.address;
+    buttonCancel.setAttribute("title", `With Account: ${depositor.address}`);
   }
 }
 

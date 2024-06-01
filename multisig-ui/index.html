@@ -67,12 +67,12 @@
       }
 
       /* Hide unless admin */
-      .countersignCancel {
+      .cancelSection {
         display: none;
       }
 
-      .isAdmin .countersignCancel {
-        display: inline-block;
+      .isAdmin .cancelSection {
+        display: block;
       }
 
       @keyframes flash {
@@ -130,14 +130,16 @@
           <input title="Click out to update" name="callData" class="callData" style="width: 100%" />
         </label>
         <div class="walletAddressNotFound">
-          Notice: The connected wallet extension does not have any addresses that match the multisig participants.
-          <br />
-          <button class="countersign countersignCancel">Cancel Transaction</button>
+          Notice: The connected wallet extension does not have any addresses that match the multisig participants that
+          can sign.
         </div>
         <div class="signingSection">
           <button class="countersign countersignExe">Authorize and Execute</button>
           <button class="countersign countersignAuth">Authorize only without executing</button>
           <span style="margin: 2rem" class="loader"></span><br />
+        </div>
+        <div class="cancelSection">
+          <button class="countersign countersignCancel">Cancel Transaction</button>
         </div>
       </div>
     </template>
