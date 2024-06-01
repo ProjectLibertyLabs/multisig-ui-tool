@@ -18,7 +18,7 @@ import {
 import { getParameterByName, setUrlParameter } from "../url.js";
 import { inProgress } from "../progress.js";
 import { displaySchedule } from "../schedule.js";
-import { AddressError, getAccounts, getMultisigAddress } from "../wallet.js";
+import { AddressError, getAccounts, getMultisigAddress, addressEquality } from "../wallet.js";
 
 function multisigProcess(showError = false) {
   const element = document.getElementById("multisigSignatories");
@@ -132,7 +132,7 @@ async function pendingTransactionUpdate(tx, el) {
   }
 
   // Get the account that deposited
-  const depositor = (await getAccounts(getPrefix(), true)).find((x) => x.address === tx.depositor);
+  const depositor = (await getAccounts(getPrefix(), true)).find((x) => addressEquality(x.address, tx.depositor));
 
   const buttonCancel = el.querySelector(".countersignCancel");
   buttonCancel.dataset.txHash = tx.hash;

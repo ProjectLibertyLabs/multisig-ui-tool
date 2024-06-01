@@ -1,5 +1,6 @@
 import {
   checkAddress,
+  decodeAddress,
   encodeAddress,
   createKeyMulti,
 } from "https://cdn.jsdelivr.net/npm/@polkadot/util-crypto@12.6.2/+esm";
@@ -51,4 +52,17 @@ export function getMultisigAddress(prefix) {
 
   const multisigAddress = encodeAddress(createKeyMulti(multisigSignatories, multisigThreshold), prefix);
   return [multisigAddress, multisigThreshold, multisigSignatories];
+}
+
+function arrayEquality(a, b) {
+  if (a.length !== b.length) return false;
+
+  for (const i in a) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+export function addressEquality(a, b) {
+  return arrayEquality(decodeAddress(a), decodeAddress(b));
 }
