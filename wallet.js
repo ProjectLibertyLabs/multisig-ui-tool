@@ -3,8 +3,8 @@ import {
   decodeAddress,
   encodeAddress,
   createKeyMulti,
-} from "https://cdn.jsdelivr.net/npm/@polkadot/util-crypto@12.6.2/+esm";
-import { web3Accounts } from "https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.46.9/+esm";
+} from "https://cdn.jsdelivr.net/npm/@polkadot/util-crypto@13.1.1/+esm";
+import { web3Accounts } from "https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.53.1/+esm";
 
 export class AddressError extends Error {}
 
