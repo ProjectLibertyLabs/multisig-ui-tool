@@ -3,12 +3,12 @@ import {
   encodeAddress,
   blake2AsHex,
   decodeAddress,
-} from "https://cdn.jsdelivr.net/npm/@polkadot/util-crypto@13.1.1/+esm";
+} from "https://cdn.jsdelivr.net/npm/@polkadot/util-crypto@13.4.3/+esm";
 import {
   web3Accounts,
   web3Enable,
   web3FromAddress,
-} from "https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.53.1/+esm";
+} from "https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.58.6/+esm";
 import {
   loadApi,
   initConnection,

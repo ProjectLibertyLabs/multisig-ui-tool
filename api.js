@@ -1,4 +1,4 @@
-import { WsProvider, ApiPromise } from "https://cdn.jsdelivr.net/npm/@polkadot/api@13.2.1/+esm";
+import { WsProvider, ApiPromise } from "https://cdn.jsdelivr.net/npm/@polkadot/api@15.8.1/+esm";
 
 let singletonApi;
 let singletonProvider;
