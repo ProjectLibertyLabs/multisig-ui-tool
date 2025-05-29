@@ -1,5 +1,5 @@
-import { checkAddress, encodeAddress } from "https://cdn.jsdelivr.net/npm/@polkadot/util-crypto@13.4.3/+esm";
-import { web3Enable, web3FromAddress } from "https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.58.6/+esm";
+import { checkAddress, encodeAddress } from "https://cdn.jsdelivr.net/npm/@polkadot/util-crypto@13.5.1/+esm";
+import { web3Enable, web3FromAddress } from "https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.58.10/+esm";
 import {
   loadApi,
   initConnection,
