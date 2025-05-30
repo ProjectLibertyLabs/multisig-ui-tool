@@ -19,8 +19,6 @@ jobs:
   test:
     name: Run Playwright Tests
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.52.0-noble
     services:
       frequency:
         # MUST be latest as we always want to be testing to make sure it works against anything new
@@ -45,10 +43,10 @@ jobs:
           node-version: 22
           cache: "npm"
           cache-dependency-path: package-lock.json
-      - name: Install Playwright Browsers
-        run: npx playwright install chromium # does not need "--with-deps" because we are using the official image
       - name: Install NPM Modules
         run: npm i
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
       - name: Run Playwright Tests
         run: npm test
       - name: Upload Report
