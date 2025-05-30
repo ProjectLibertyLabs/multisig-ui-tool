@@ -174,7 +174,7 @@ test("should create time release schedules simple account and cross sign", async
   await expect(page.locator("#multisigAddress")).toContainText(multisigAddress);
 
   // Wait for pending transactions to load
-  const pendingLast = page.locator(".pending-multisig").last();
+  const pendingLast = page.locator(".pending-multisig").first();
   await expect(pendingLast).toBeVisible();
 
   // Set calldata
