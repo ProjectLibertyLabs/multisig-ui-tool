@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Verify PR Commit
+concurrency:
+  group: ${{github.workflow}}-${{github.ref}}
+  cancel-in-progress: true
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "11 3 * * *"
+# Set default permissions as restrictive
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  test:
+    name: Run Playwright Tests
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.52.0-noble
+    services:
+      frequency:
+        # MUST be latest as we always want to be testing to make sure it works against anything new
+        image: "frequencychain/standalone-node:latest"
+        options: >-
+          --health-cmd "bash -c '(echo >\"/dev/tcp/127.0.0.1/9944\") &>/dev/null'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        env:
+          SEALING_MODE: "instant"
+        ports:
+          - "9944:9944" # ws and rpc port
+    steps:
+      - name: Check Out Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up NodeJs
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+      - name: Install Playwright Browsers
+        run: npx playwright install chromium # does not need "--with-deps" because we are using the official image
+      - name: Install NPM Modules
+        run: npm i
+      - name: Run Playwright Tests
+        run: npm test
