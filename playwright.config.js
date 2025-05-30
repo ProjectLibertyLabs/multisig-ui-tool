@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
-  fullyParallel: true, // Run tests sequentially
+  fullyParallel: false, // Run tests sequentially
   forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: "html",
