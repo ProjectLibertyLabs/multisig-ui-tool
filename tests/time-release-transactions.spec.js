@@ -8,9 +8,6 @@ let polkadotExtensionMock;
 let api;
 let testAccounts = {};
 let multisigAddress;
-// This is the calldata that the countersigning should use
-const staticCallData =
-  "0x2801008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a489de2c717010000000100000002286bee";
 
 test.beforeAll(async () => {
   await cryptoWaitReady();
@@ -45,7 +42,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(polkadotExtensionMock);
 });
 
-test("should create time release schedules simple account", async ({ page }) => {
+test("should create time release schedules simple account and cross sign", async ({ page }) => {
   // First, navigate to time release UI and create a schedule
   await page.goto("/time-release-ui/");
 
@@ -81,8 +78,11 @@ test("should create time release schedules simple account", async ({ page }) => 
   // Wait for transaction to be sent
   await expect(page.locator("#log")).toContainText("finalized at block hash", { timeout: 10000 });
 
-  // Verify that the calldata matches
-  await expect(page.locator("#log")).toContainText(staticCallData, { timeout: 10000 });
+  await expect(page.locator("#log")).toContainText("Call Data: 0x", { timeout: 10000 });
+
+  // Get the calldata
+  const logText = await page.locator("#log").textContent();
+  const callData = logText.match(/Call Data: 0x.*$/)[0].replace("Call Data: ", "");
 
   // Now check if this schedule appears in the Balance UI
   await page.goto("/balance-ui/");
@@ -98,9 +98,7 @@ test("should create time release schedules simple account", async ({ page }) => 
   // Verify time release schedule is shown
   await expect(page.locator("#timeReleaseSchedule")).toContainText("Locked Until", { timeout: 10000 });
   await expect(page.locator("#timeReleaseSchedule")).toContainText("Relay Chain Block Number");
-});
 
-test("should create time release schedules for multisig", async ({ page }) => {
   // First, navigate to time release UI and create a schedule
   await page.goto("/time-release-ui/");
 
@@ -156,11 +154,9 @@ test("should create time release schedules for multisig", async ({ page }) => {
   // Verify time release schedule is shown
   await expect(page.locator("#timeReleaseSchedule")).toContainText("Locked Until", { timeout: 10000 });
   await expect(page.locator("#timeReleaseSchedule")).toContainText("Relay Chain Block Number");
-});
 
-// This test assumes we have a pending multisig that Bob can countersign
-// That is created from the prior test
-test("should allow countersigning a pending transaction multisig", async ({ page }) => {
+  // Finally do the countersigning
+
   await page.goto("/multisig-ui/");
   // Connect to node
   await page.selectOption("#provider", "ws://127.0.0.1:9944");
@@ -182,7 +178,7 @@ test("should allow countersigning a pending transaction multisig", async ({ page
   await expect(pendingLast).toBeVisible();
 
   // Set calldata
-  pendingLast.locator(".callData").fill(staticCallData);
+  pendingLast.locator(".callData").fill(callData);
 
   // Find the countersign button (assuming Bob can sign)
   const countersignButton = pendingLast.locator(".countersignAuth:not([disabled])");
