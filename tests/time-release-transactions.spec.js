@@ -187,5 +187,5 @@ test("should create time release schedules simple account and cross sign", async
   await countersignButton.click();
 
   // Wait for finalization
-  await expect(pendingLast.locator("p")).toContainText("Finalized", { timeout: 20000 });
+  await expect(pendingLast).toContainText("Finalized", { timeout: 20000 });
 });
