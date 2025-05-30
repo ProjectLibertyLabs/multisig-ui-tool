@@ -31,7 +31,7 @@ export async function setupPolkadotExtensionMock() {
           const payloadToMsg = async (payload) => {
             const { WsProvider, ApiPromise } = await import("https://cdn.jsdelivr.net/npm/@polkadot/api@16.0.1/+esm");
 
-            const PROVIDER_URI = "ws://localhost:9944";
+            const PROVIDER_URI = "ws://127.0.0.1:9944";
             const api = await ApiPromise.create({ provider: new WsProvider(PROVIDER_URI), throwOnConnect: true });
             return api.registry.createType("ExtrinsicPayload", payload, { version: payload.version });
           };

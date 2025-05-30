@@ -15,7 +15,7 @@ test.beforeAll(async () => {
   polkadotExtensionMock = await setupPolkadotExtensionMock();
 
   // Connect to the local node
-  const provider = new WsProvider("ws://localhost:9944");
+  const provider = new WsProvider("ws://127.0.0.1:9944");
   api = await ApiPromise.create({ provider });
 
   // Setup test accounts
@@ -46,7 +46,7 @@ test.beforeEach(async ({ page }) => {
 
 test("should connect to node and display the form", async ({ page }) => {
   // Connect to node
-  await page.selectOption("#provider", "ws://localhost:9944");
+  await page.selectOption("#provider", "ws://127.0.0.1:9944");
   await page.click("#connectButton");
 
   // Check we're connected
@@ -55,7 +55,7 @@ test("should connect to node and display the form", async ({ page }) => {
 
 test("should validate multisig configuration", async ({ page }) => {
   // Connect to node
-  await page.selectOption("#provider", "ws://localhost:9944");
+  await page.selectOption("#provider", "ws://127.0.0.1:9944");
   await page.click("#connectButton");
 
   // Set invalid config (threshold > signatories)
@@ -71,7 +71,7 @@ test("should validate multisig configuration", async ({ page }) => {
 
 test("should find multisig and display balance", async ({ page }) => {
   // Connect to node
-  await page.selectOption("#provider", "ws://localhost:9944");
+  await page.selectOption("#provider", "ws://127.0.0.1:9944");
   await page.click("#connectButton");
 
   // Configure multisig to match our test multisig

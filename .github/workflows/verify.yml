@@ -55,7 +55,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: Playwright Report (${{matrix.target_environment}})
+          name: Playwright-Report-Multisig-UI-Tool
           path: playwright-report/
           retention-days: 4
           if-no-files-found: error

@@ -6,7 +6,7 @@ import { cryptoWaitReady } from "@polkadot/util-crypto";
 setup("setup test environment", async () => {
   await cryptoWaitReady();
   // Connect to local node
-  const provider = new WsProvider("ws://localhost:9944");
+  const provider = new WsProvider("ws://127.0.0.1:9944");
   const api = await ApiPromise.create({ provider });
 
   // Wait for crypto utilities to be ready

@@ -19,7 +19,7 @@ test.beforeAll(async () => {
   alice = keyring.addFromUri("//Alice");
   bob = keyring.addFromUri("//Bob");
 
-  const provider = new WsProvider("ws://localhost:9944");
+  const provider = new WsProvider("ws://127.0.0.1:9944");
   api = await ApiPromise.create({ provider });
   console.log("API connected.");
 
@@ -46,14 +46,14 @@ test.beforeEach(async ({ page }) => {
 
 test("should connect to a node and display the interface", async ({ page }) => {
   // Select the localhost network
-  await page.selectOption("#provider", "ws://localhost:9944");
+  await page.selectOption("#provider", "ws://127.0.0.1:9944");
 
   // Click connect button
   await page.click("#connectButton");
 
   // Check that the connection was established
   await expect(page.locator("#disconnectButton")).toBeVisible();
-  await expect(page.locator("#currentProvider")).toContainText("ws://localhost:9944");
+  await expect(page.locator("#currentProvider")).toContainText("ws://127.0.0.1:9944");
 
   // UI elements for balance check should be visible
   await expect(page.locator("#balanceForm")).toBeVisible();
@@ -62,7 +62,7 @@ test("should connect to a node and display the interface", async ({ page }) => {
 
 test("should display error for invalid address", async ({ page }) => {
   // Connect to node
-  await page.selectOption("#provider", "ws://localhost:9944");
+  await page.selectOption("#provider", "ws://127.0.0.1:9944");
   await page.click("#connectButton");
 
   // Enter invalid address
@@ -77,7 +77,7 @@ test("should display error for invalid address", async ({ page }) => {
 
 test("should fetch and display account balance", async ({ page }) => {
   // Connect to node
-  await page.selectOption("#provider", "ws://localhost:9944");
+  await page.selectOption("#provider", "ws://127.0.0.1:9944");
   await page.click("#connectButton");
 
   // Enter Alice's address
@@ -97,7 +97,7 @@ test("should fetch and display account balance", async ({ page }) => {
 
 test("should disconnect from node", async ({ page }) => {
   // Connect to node
-  await page.selectOption("#provider", "ws://localhost:9944");
+  await page.selectOption("#provider", "ws://127.0.0.1:9944");
   await page.click("#connectButton");
 
   // Disconnect

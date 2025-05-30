@@ -17,7 +17,7 @@ test.beforeAll(async () => {
   console.log("Crypto initialized.");
   polkadotExtensionMock = await setupPolkadotExtensionMock();
   // Connect to the local node
-  const provider = new WsProvider("ws://localhost:9944");
+  const provider = new WsProvider("ws://127.0.0.1:9944");
   api = await ApiPromise.create({ provider });
 
   // Setup test accounts
@@ -50,7 +50,7 @@ test("should create time release schedules simple account", async ({ page }) => 
   await page.goto("/time-release-ui/");
 
   // Connect to node
-  await page.selectOption("#provider", "ws://localhost:9944");
+  await page.selectOption("#provider", "ws://127.0.0.1:9944");
   await page.click("#connectButton");
 
   // Wait for connection to be established
@@ -88,7 +88,7 @@ test("should create time release schedules simple account", async ({ page }) => 
   await page.goto("/balance-ui/");
 
   // Connect to node
-  await page.selectOption("#provider", "ws://localhost:9944");
+  await page.selectOption("#provider", "ws://127.0.0.1:9944");
   await page.click("#connectButton");
 
   // Look up Bob's address
@@ -105,7 +105,7 @@ test("should create time release schedules for multisig", async ({ page }) => {
   await page.goto("/time-release-ui/");
 
   // Connect to node
-  await page.selectOption("#provider", "ws://localhost:9944");
+  await page.selectOption("#provider", "ws://127.0.0.1:9944");
   await page.click("#connectButton");
 
   // Wait for connection to be established
@@ -146,7 +146,7 @@ test("should create time release schedules for multisig", async ({ page }) => {
   await page.goto("/balance-ui/");
 
   // Connect to node
-  await page.selectOption("#provider", "ws://localhost:9944");
+  await page.selectOption("#provider", "ws://127.0.0.1:9944");
   await page.click("#connectButton");
 
   // Look up Bob's address
@@ -163,7 +163,7 @@ test("should create time release schedules for multisig", async ({ page }) => {
 test("should allow countersigning a pending transaction multisig", async ({ page }) => {
   await page.goto("/multisig-ui/");
   // Connect to node
-  await page.selectOption("#provider", "ws://localhost:9944");
+  await page.selectOption("#provider", "ws://127.0.0.1:9944");
   await page.click("#connectButton");
 
   // Configure multisig
