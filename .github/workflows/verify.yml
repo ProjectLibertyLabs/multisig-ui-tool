@@ -51,3 +51,11 @@ jobs:
         run: npm i
       - name: Run Playwright Tests
         run: npm test
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: Playwright Report (${{matrix.target_environment}})
+          path: playwright-report/
+          retention-days: 4
+          if-no-files-found: error
