@@ -13,6 +13,7 @@ import {
 } from "../api.js";
 import { setUrlParameter, getParameterByName } from "../url.js";
 import { displaySchedule, sortSchedule, getSchedules } from "../schedule.js";
+import { getLedger, displayStaking } from "../staking.js";
 import { inProgress } from "../progress.js";
 
 async function updateData(lookupAddress) {
@@ -70,6 +71,13 @@ async function updateData(lookupAddress) {
       });
     resultSchedule.append(ul);
   }
+
+  // Staking Status
+  const ledger = await getLedger(api, account);
+  const stakingStatusEl = displayStaking(ledger);
+  const stakingStatus = document.getElementById("stakingStatus");
+  stakingStatus.innerHTML = "";
+  stakingStatus.append(stakingStatusEl);
 
   document.getElementById("currentResults").style.display = "block";
 }

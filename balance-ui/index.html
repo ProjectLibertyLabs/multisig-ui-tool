@@ -68,6 +68,15 @@
       </dl>
     </template>
 
+    <template id="staking-template">
+      <dl>
+        <dt>Staking Type</dt>
+        <dd class="stakingType"></dd>
+        <dt>Amount</dt>
+        <dd class="stakingTokens"></dd>
+      </dl>
+    </template>
+
     <h1>Balance Check</h1>
     <p>Does a simple lookup and report of balance information for an account</p>
     <div class="hideConnected">
@@ -110,6 +119,9 @@
         <dt>Free (Plancks)</dt>
         <dd id="resultFree">...</dd>
       </dl>
+      <h3>Staking Status</h3>
+      <span class="loader"></span>
+      <div id="stakingStatus">...</div>
       <h3>Time Release Unlock Schedule</h3>
       <span class="loader"></span>
       <div id="timeReleaseSchedule">...</div>
