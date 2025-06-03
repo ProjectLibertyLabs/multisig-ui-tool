@@ -130,7 +130,7 @@ export async function getCurrentRelayChainBlockNumber() {
   }
   const relayEndpoint = {
     42: "wss://paseo-rpc.dwellir.com",
-    90: "wss://rpc.polkadot.io",
+    90: "wss://polkadot.rpc.subquery.network/public/ws",
   };
 
   const api = await ApiPromise.create({ provider: new WsProvider(relayEndpoint[PREFIX]) });
