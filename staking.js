@@ -20,7 +20,30 @@ export async function getLedger(api, account) {
   };
 }
 
-export function displayStaking(ledger) {
+export async function getStakeTargets(api, account) {
+  const targets = await api.query.capacity.stakingTargetLedger.entries(account);
+
+  if (targets.length === 0) {
+    return [];
+  }
+
+  return Promise.all(
+    targets.map(async (target) => {
+      const providerId = target[0].args[1].toBigInt();
+      const stakeAmount = target[1].unwrap().amount.toBigInt();
+      const providerRegistry = await api.query.msa.providerToRegistryEntry(providerId);
+      return {
+        providerName: providerRegistry
+          .unwrapOr({ providerName: { toHuman: () => "Invalid Provider" } })
+          .providerName.toHuman(),
+        providerId,
+        stakeAmount,
+      };
+    }),
+  );
+}
+
+export function displayStaking(ledger, targets) {
   if (!ledger) {
     return "No active staking.";
   }
@@ -31,5 +54,30 @@ export function displayStaking(ledger) {
 
   stakingEl.querySelector(".stakingType").innerHTML = StakingType[ledger.type] || ledger.type;
 
+  const stakeDetailsEl = stakingEl.querySelector(".stakeDetails");
+
+  const detailsTemplate = document.querySelector("#staking-template-detail");
+  for (const target of targets) {
+    const detail = detailsTemplate.content.cloneNode(true);
+    detail.querySelector(".stakeDetailsAmount").innerHTML = toDecimalUnit(target.stakeAmount) + " " + getUnit();
+    detail.querySelector(".stakeDetailsProvider").innerHTML =
+      `${target.providerName} (Id: ${target.providerId.toString()})`;
+    const button = detail.querySelector(".unstakeButton");
+    button.dataset.providerId = target.providerId.toString();
+    button.dataset.stakeAmount = target.stakeAmount.toString();
+    stakeDetailsEl.append(detail);
+  }
+
   return stakingEl;
+}
+
+export function getStakingCall(api, stakeType, providerId, amount) {
+  switch (stakeType) {
+    case "ProviderBoost":
+      return api.tx.capacity.providerBoost(providerId, amount);
+    case "MaxCapacity":
+      return api.tx.capacity.stake(providerId, amount);
+    default:
+      throw new Error(`Unknown staking type "${stakeType}"`);
+  }
 }

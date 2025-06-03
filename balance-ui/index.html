@@ -72,10 +72,42 @@
       <dl>
         <dt>Staking Type</dt>
         <dd class="stakingType"></dd>
-        <dt>Amount</dt>
+        <dt>Total Amount</dt>
         <dd class="stakingTokens"></dd>
+        <dt>Stakes</dt>
+        <dd class="stakeDetails"></dd>
       </dl>
     </template>
+
+    <template id="staking-template-detail">
+      <dl>
+        <dt>Provider</dt>
+        <dd class="stakeDetailsProvider"></dd>
+        <dt>Amount</dt>
+        <dd class="stakeDetailsAmount"></dd>
+        <dt>Unstake</dt>
+        <dd>
+          <button class="unstakeButton" autocomplete="off" popovertarget="unstaking-modal">Unstake</button>
+        </dd>
+      </dl>
+    </template>
+
+    <dialog popover="" id="unstaking-modal">
+      <h3>Unstake</h3>
+      <form id="unstakeForm">
+        <label for="providerId">Provider Id</label>
+        <input type="number" name="providerId" required step="1" />
+
+        <div class="amountUnit">
+          <label for="amount">Amount: (in Planck <span class="unit">UNIT</span>s)</label>
+          <input autocomplete="off" type="number" name="amount" required min="10000000" step="1" />
+          <p><span class="unit">UNIT</span>: <span class="unitAmount"></span></p>
+        </div>
+        <br />
+        <button type="submit" id="doUnstakeButton">Unstake</button>
+        <span class="loader"></span>
+      </form>
+    </dialog>
 
     <h1>Balance Check</h1>
     <p>Does a simple lookup and report of balance information for an account</p>
@@ -106,8 +138,9 @@
       <label for="lookupAddress">Lookup Address:</label>
       <input type="text" id="lookupAddress" name="lookupAddress" required />
       <button type="submit">Get Balance</button>
+      <span class="loader"></span>
     </form>
-    <section id="currentResults" class="showConnected" style="display: none">
+    <section id="currentResults" style="display: none">
       <h2>Address: <span id="resultAddress"></span></h2>
       <dl>
         <dt>Balance</dt>
@@ -119,9 +152,35 @@
         <dt>Free (Plancks)</dt>
         <dd id="resultFree">...</dd>
       </dl>
+
       <h3>Staking Status</h3>
       <span class="loader"></span>
+      <button autocomplete="off" disabled popovertarget="staking-modal" id="stakeButton">Stake Tokens</button>
       <div id="stakingStatus">...</div>
+      <dialog popover="" id="staking-modal">
+        <h3>Stake</h3>
+        <form id="stakeForm">
+          <label for="stakeType">Staking Type</label>
+          <select name="stakeType" id="stakeType" required>
+            <option value="ProviderBoost" name="provider_boosting">Provider Boosting</option>
+            <option value="MaxCapacity" name="max_capacity">Maximum Capacity</option>
+          </select>
+
+          <label for="providerId">Provider Id</label>
+          <input type="number" name="providerId" required step="1" />
+
+          <div class="amountUnit">
+            <label for="amount">Amount: (in Planck <span class="unit">UNIT</span>s)</label>
+            <input autocomplete="off" type="number" name="amount" required min="10000000" step="1" />
+            <p><span class="unit">UNIT</span>: <span class="unitAmount"></span></p>
+          </div>
+
+          <br />
+          <button type="submit" id="doStakeButton">Stake</button>
+          <span class="loader"></span>
+        </form>
+      </dialog>
+
       <h3>Time Release Unlock Schedule</h3>
       <span class="loader"></span>
       <div id="timeReleaseSchedule">...</div>
