@@ -89,6 +89,8 @@ async function updateData(lookupAddress) {
     const stakingStatus = document.getElementById("stakingStatus");
     stakingStatus.innerHTML = "";
     stakingStatus.append(stakingStatusEl);
+  } else {
+    document.getElementById("stakingStatus").innerHTML = "No stakes found";
   }
 
   document.getElementById("currentResults").style.display = "block";
@@ -113,9 +115,10 @@ function isBadAddress(address) {
   const addressCheck = checkAddress(address, getPrefix());
   if (!addressCheck[0]) {
     alert(`Address invalid: ${addressCheck[1] || "unknown"}`);
-    return false;
+    // IS BAD
+    return true;
   }
-  return true;
+  return false;
 }
 
 // Do the actual stake
@@ -168,7 +171,7 @@ async function doUnstake(event, sender, providerId, amount) {
       { signer: injector.signer },
       postTransaction(document.getElementById("unstaking-modal"), async () => {
         // Wait a bit before refreshing...
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, 6000));
         await updateData(sender);
         inProgress(false, ".loader", null, event.target.id);
       }),
