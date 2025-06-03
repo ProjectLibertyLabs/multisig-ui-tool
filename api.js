@@ -24,6 +24,13 @@ export function getProviderUrl() {
   return providerUrl;
 }
 
+export function updateUnitValues(containerEl) {
+  const amountInput = containerEl.querySelector("input");
+  const amount = Number(amountInput.value);
+
+  containerEl.querySelector(".unitAmount").textContent = `${toDecimalUnit(amount)} ${getUnit()}`;
+}
+
 // Load up the api for the given provider uri
 export async function loadApi(providerUri) {
   // Singleton
@@ -123,7 +130,7 @@ export async function getCurrentRelayChainBlockNumber() {
   }
   const relayEndpoint = {
     42: "wss://paseo-rpc.dwellir.com",
-    90: "wss://rpc.polkadot.io",
+    90: "wss://polkadot.rpc.subquery.network/public/ws",
   };
 
   const api = await ApiPromise.create({ provider: new WsProvider(relayEndpoint[PREFIX]) });
@@ -190,13 +197,13 @@ export async function getBalance(address) {
   const api = await loadApi();
 
   const resp = await api.query.system.account(address);
-  const total = BigInt(resp.data.free.toJSON());
+  const total = resp.data.free.toBigInt();
 
   return {
     decimal: toDecimalUnit(total),
-    plancks: BigInt(total).toLocaleString(),
-    free: resp.data.free.toHuman(),
-    frozen: resp.data.frozen.toHuman(),
+    plancks: total.toLocaleString(),
+    free: resp.data.free.toBigInt(),
+    frozen: resp.data.frozen.toBigInt(),
   };
 }
 

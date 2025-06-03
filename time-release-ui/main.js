@@ -14,7 +14,7 @@ import {
   initConnection,
   toDecimalUnit,
   getPrefix,
-  getUnit,
+  updateUnitValues,
   getIsConnected,
   getCurrentRelayChainBlockNumber,
   getProviderUrl,
@@ -53,7 +53,7 @@ async function updateSenderBalance() {
     return;
   }
   const resp = await api.query.system.account(sender);
-  const balance = resp.data.free.toString();
+  const balance = resp.data.free.toLocaleString();
 
   balanceDisplay.innerHTML = toDecimalUnit(balance);
 }
@@ -67,7 +67,7 @@ async function updateMultisigBalance(sender) {
     return;
   }
   const resp = await api.query.system.account(sender);
-  const balance = resp.data.free.toString();
+  const balance = resp.data.free.toLocaleString();
 
   balanceDisplay.innerHTML = toDecimalUnit(balance);
 }
@@ -168,13 +168,8 @@ async function updateBlockNumber(date) {
 }
 
 // Input is in Planck, but we want to show the getUnit() amount as well
-function updateUnitValues() {
-  const amountInput = document.getElementById("amount");
-  const amount = Number(amountInput.value);
-  const unitDisplay = document.getElementById("unit");
-
-  // Update getUnit() display
-  unitDisplay.textContent = `${toDecimalUnit(amount)} ${getUnit()}`;
+function updateAmountUnitValues() {
+  updateUnitValues(document.querySelector(".amountUnit"));
 }
 
 // Pasting into the Transaction label will get us a
@@ -434,7 +429,7 @@ async function postConnect() {
 // Update the various derived values from fields
 function triggerUpdates() {
   updateBlockNumber();
-  updateUnitValues();
+  updateAmountUnitValues();
   updateSenderBalance();
   updateMultisigPending();
   multisigProcess(false);
@@ -442,7 +437,7 @@ function triggerUpdates() {
 
 // Start this up with event listeners
 function init() {
-  document.getElementById("amount").addEventListener("input", updateUnitValues);
+  document.getElementById("amount").addEventListener("input", updateAmountUnitValues);
   document.getElementById("transferForm").addEventListener("submit", createTransfer);
   document.getElementById("copyTemplate").addEventListener("click", (e) => {
     e.preventDefault();
