@@ -10,10 +10,14 @@ import {
   getBalance,
   hasSuccess,
   getProviderUrl,
+  updateUnitValues,
 } from "../api.js";
 import { setUrlParameter, getParameterByName } from "../url.js";
 import { displaySchedule, sortSchedule, getSchedules } from "../schedule.js";
+import { getLedger, displayStaking, getStakingCall, getStakeTargets } from "../staking.js";
 import { inProgress } from "../progress.js";
+
+const DOLLAR = 100_000_000n;
 
 async function updateData(lookupAddress) {
   document.getElementById("currentResults").style.display = "none";
@@ -25,16 +29,15 @@ async function updateData(lookupAddress) {
 
   const api = await loadApi();
   const balanceData = await getBalance(account);
-  const hasMoreThanOneTokenFree = BigInt(balanceData.free.replaceAll(",", "")) > 100_000_000n;
+  const hasMoreThanOneTokenFree = balanceData.free > DOLLAR;
 
   const resultSchedule = document.getElementById("timeReleaseSchedule");
-  resultSchedule.innerHTML = "Loading...";
 
   document.getElementById("resultAddress").innerHTML = account;
   document.getElementById("resultBalanceTokens").innerHTML = balanceData.decimal + " " + getUnit();
   document.getElementById("resultBalancePlancks").innerHTML = balanceData.plancks;
-  document.getElementById("resultFree").innerHTML = balanceData.free;
-  document.getElementById("resultReserved").innerHTML = balanceData.frozen;
+  document.getElementById("resultFree").innerHTML = balanceData.free.toLocaleString();
+  document.getElementById("resultReserved").innerHTML = balanceData.frozen.toLocaleString();
 
   // Look up the timeRelease Pallet information for the address
   const schedules = await getSchedules(api, account);
@@ -71,6 +74,25 @@ async function updateData(lookupAddress) {
     resultSchedule.append(ul);
   }
 
+  // Staking Status
+  const ledger = await getLedger(api, account);
+  // Staking Modals
+  document.getElementById("stakeButton").disabled = !hasMoreThanOneTokenFree;
+
+  if (ledger) {
+    // Stake form max amount setup
+    document.querySelector('#stakeForm input[name="amount"]').max = (balanceData.free - DOLLAR).toString();
+
+    // Show the details
+    const targets = await getStakeTargets(api, account);
+    const stakingStatusEl = displayStaking(ledger, targets);
+    const stakingStatus = document.getElementById("stakingStatus");
+    stakingStatus.innerHTML = "";
+    stakingStatus.append(stakingStatusEl);
+  } else {
+    document.getElementById("stakingStatus").innerHTML = "No stakes found";
+  }
+
   document.getElementById("currentResults").style.display = "block";
 }
 
@@ -89,14 +111,82 @@ function validateAddress(address, element = null) {
   return isValid;
 }
 
+function isBadAddress(address) {
+  const addressCheck = checkAddress(address, getPrefix());
+  if (!addressCheck[0]) {
+    alert(`Address invalid: ${addressCheck[1] || "unknown"}`);
+    // IS BAD
+    return true;
+  }
+  return false;
+}
+
+// Do the actual stake
+async function doStake(event, sender, stakeType, providerId, amount) {
+  event.preventDefault();
+  if (isBadAddress(sender)) return;
+
+  inProgress(true, ".loader", null, event.target.id);
+
+  const api = await loadApi();
+  try {
+    await web3Enable("Balance Check dApp");
+    const stakeCall = getStakingCall(api, stakeType, providerId, amount);
+    const injector = await web3FromAddress(sender);
+
+    const sending = stakeCall.signAndSend(
+      sender,
+      { signer: injector.signer },
+      postTransaction(document.getElementById("staking-modal"), async () => {
+        // Wait a bit before refreshing...
+        await new Promise((r) => setTimeout(r, 2000));
+        await updateData(sender);
+        inProgress(false, ".loader", null, event.target.id);
+      }),
+    );
+    await sending;
+  } catch (e) {
+    alert(`ERROR: ${e.toString()}`);
+    inProgress(false, ".loader", null, event.target.id);
+  }
+}
+
+// Do the actual stake
+async function doUnstake(event, sender, providerId, amount) {
+  event.preventDefault();
+  if (isBadAddress(sender)) return;
+
+  inProgress(true, ".loader", null, event.target.id);
+
+  event.target;
+
+  const api = await loadApi();
+  try {
+    await web3Enable("Balance Check dApp");
+    const stakeCall = api.tx.capacity.unstake(providerId, amount);
+    const injector = await web3FromAddress(sender);
+
+    const sending = stakeCall.signAndSend(
+      sender,
+      { signer: injector.signer },
+      postTransaction(document.getElementById("unstaking-modal"), async () => {
+        // Wait a bit before refreshing...
+        await new Promise((r) => setTimeout(r, 6000));
+        await updateData(sender);
+        inProgress(false, ".loader", null, event.target.id);
+      }),
+    );
+    await sending;
+  } catch (e) {
+    alert(`ERROR: ${e.toString()}`);
+    inProgress(false, ".loader", null, event.target.id);
+  }
+}
+
 // Do the actual claim
 async function claim(event, sender) {
   event.preventDefault();
-  const addressCheck = checkAddress(sender, getPrefix());
-  if (!addressCheck[0]) {
-    alert(`Address invalid: ${addressCheck[1] || "unknown"}`);
-    return;
-  }
+  if (isBadAddress(sender)) return;
 
   inProgress(true, ".loader", null, event.target.id);
 
@@ -177,8 +267,41 @@ function init() {
   });
   document.getElementById("balanceForm").addEventListener("submit", (e) => {
     e.preventDefault();
-    updateData(lookupAddressEl.value);
+    inProgress(true, ".loader", null, null);
+    updateData(lookupAddressEl.value).finally(() => {
+      inProgress(false, ".loader", null, null);
+    });
     setUrlParameter("address", lookupAddressEl.value);
+  });
+
+  for (const el of document.querySelectorAll(".amountUnit")) {
+    el.querySelector("input").addEventListener("input", () => updateUnitValues(el));
+  }
+
+  // Watch for the stake button
+  document.getElementById("stakeForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const form = new FormData(e.target);
+    doStake(e, lookupAddressEl.value, form.get("stakeType"), form.get("providerId"), form.get("amount"));
+  });
+
+  // Unstake Button
+  document.getElementById("unstakeForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const form = new FormData(e.target);
+    doUnstake(e, lookupAddressEl.value, form.get("providerId"), form.get("amount"));
+  });
+
+  // Unstake form fill
+  document.getElementById("unstaking-modal").addEventListener("beforetoggle", (event) => {
+    if (event.newState === "open" && document.activeElement) {
+      const providerId = document.activeElement.dataset.providerId || "";
+      const stakeAmount = document.activeElement.dataset.stakeAmount || "";
+      event.target.querySelector('input[name="providerId"]').value = providerId;
+      const amountInput = event.target.querySelector('input[name="amount"]');
+      amountInput.value = stakeAmount;
+      amountInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
   });
 
   initConnection(postConnect);
