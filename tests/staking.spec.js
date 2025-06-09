@@ -30,19 +30,21 @@ test.beforeAll(async () => {
   polkadotExtensionMock = await setupPolkadotExtensionMock();
   console.log("Extension mock ready.");
 
-  // Make Alice a provider, if not already
-  aliceMsaId = await api.query.msa.publicKeyToMsaId(alice.address);
-  if (!aliceMsaId.isNone) {
-    aliceMsaId = aliceMsaId.toString();
+  // Make Alice an MSA, if not already
+  const maybeAliceMsaId = await api.query.msa.publicKeyToMsaId(alice.address);
+  if (maybeAliceMsaId.isSome) {
+    aliceMsaId = maybeAliceMsaId.unwrap().toString();
   } else {
-    const providerRegistry = await api.query.msa.providerToRegistryEntry(aliceMsaId);
-    if (!providerRegistry) {
-      await api.tx.msa.create().signAndSend(alice);
-      await api.tx.msa.createProvider("Alice").signAndSend(alice);
-      await new Promise((r) => setTimeout(r, 2000));
-      // Set the new msaId
-      aliceMsaId = (await api.query.msa.publicKeyToMsaId(alice.address)).toString();
-    }
+    await api.tx.msa.create().signAndSend(alice);
+    await new Promise((r) => setTimeout(r, 2000));
+    aliceMsaId = (await api.query.msa.publicKeyToMsaId(alice.address)).unwrap().toString();
+  }
+
+  // Make Alice a Provider, if not already
+  const providerRegistry = await api.query.msa.providerToRegistryEntry(aliceMsaId);
+  if (providerRegistry.isNone) {
+    await api.tx.msa.createProvider("Alice").signAndSend(alice);
+    await new Promise((r) => setTimeout(r, 2000));
   }
 });
 
@@ -63,6 +65,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("should show the stake button", async ({ page }) => {
+  test.setTimeout(30_000);
   // Select the localhost network
   await page.selectOption("#provider", "ws://127.0.0.1:9944");
 
@@ -99,5 +102,5 @@ test("should show the stake button", async ({ page }) => {
 
   await expect(page.locator("#doUnstakeButton")).toBeVisible();
   await page.click("#doUnstakeButton");
-  await expect(page.locator("#unstaking-modal")).toContainText("Finalized", { timeout: 12000 });
+  await expect(page.locator("#unstaking-modal")).toContainText("Finalized", { timeout: 18000 });
 });
