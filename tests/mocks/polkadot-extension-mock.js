@@ -29,7 +29,7 @@ export async function setupPolkadotExtensionMock() {
           };
 
           const payloadToMsg = async (payload) => {
-            const { WsProvider, ApiPromise } = await import("https://cdn.jsdelivr.net/npm/@polkadot/api@16.0.1/+esm");
+            const { WsProvider, ApiPromise } = await import("https://cdn.jsdelivr.net/npm/@polkadot/api@16.4.2/+esm");
 
             const PROVIDER_URI = "ws://127.0.0.1:9944";
             const api = await ApiPromise.create({ provider: new WsProvider(PROVIDER_URI), throwOnConnect: true });
@@ -45,7 +45,7 @@ export async function setupPolkadotExtensionMock() {
             signer: {
               signPayload: async (payload) => {
                 console.log("MOCK injectedWeb3: signer.signPayload", payload);
-                const { Keyring } = await import("https://cdn.jsdelivr.net/npm/@polkadot/keyring@13.5.1/+esm");
+                const { Keyring } = await import("https://cdn.jsdelivr.net/npm/@polkadot/keyring@13.5.3/+esm");
 
                 const account = accounts[payload.address];
                 if (!account) throw new Error(`No key for ${payload.address}`);
@@ -62,9 +62,9 @@ export async function setupPolkadotExtensionMock() {
               signRaw: async (payload) => {
                 console.log("MOCK injectedWeb3: signer.signRaw", payload);
                 const { stringToU8a, u8aToHex } = await import(
-                  "https://cdn.jsdelivr.net/npm/@polkadot/util@13.5.1/+esm"
+                  "https://cdn.jsdelivr.net/npm/@polkadot/util@13.5.3/+esm"
                 );
-                const { Keyring } = await import("https://cdn.jsdelivr.net/npm/@polkadot/keyring@13.5.1/+esm");
+                const { Keyring } = await import("https://cdn.jsdelivr.net/npm/@polkadot/keyring@13.5.3/+esm");
 
                 const account = accounts[payload.address];
                 if (!account) throw new Error(`No key for ${payload.address}`);

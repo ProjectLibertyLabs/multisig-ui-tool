@@ -2,8 +2,8 @@ import {
   blake2AsHex,
   decodeAddress,
   encodeAddress,
-} from "https://cdn.jsdelivr.net/npm/@polkadot/util-crypto@13.5.1/+esm";
-import { web3Enable, web3FromAddress } from "https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.58.10/+esm";
+} from "https://cdn.jsdelivr.net/npm/@polkadot/util-crypto@13.5.3/+esm";
+import { web3Enable, web3FromAddress } from "https://cdn.jsdelivr.net/npm/@polkadot/extension-dapp@0.61.4/+esm";
 import {
   loadApi,
   getIsConnected,
