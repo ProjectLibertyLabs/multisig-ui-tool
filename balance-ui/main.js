@@ -136,7 +136,7 @@ async function doStake(event, sender, stakeType, providerId, amount) {
 
     const sending = stakeCall.signAndSend(
       sender,
-      { signer: injector.signer },
+      { signer: injector.signer, nonce: -1 },
       postTransaction(document.getElementById("staking-modal"), async () => {
         // Wait a bit before refreshing...
         await new Promise((r) => setTimeout(r, 2000));
@@ -168,7 +168,7 @@ async function doUnstake(event, sender, providerId, amount) {
 
     const sending = stakeCall.signAndSend(
       sender,
-      { signer: injector.signer },
+      { signer: injector.signer, nonce: -1 },
       postTransaction(document.getElementById("unstaking-modal"), async () => {
         // Wait a bit before refreshing...
         await new Promise((r) => setTimeout(r, 6000));
@@ -198,7 +198,7 @@ async function claim(event, sender) {
 
     const sending = claimCall.signAndSend(
       sender,
-      { signer: injector.signer },
+      { signer: injector.signer, nonce: -1 },
       postTransaction(document.getElementById("timeReleaseSchedule"), async () => {
         // Wait a bit before refreshing...
         await new Promise((r) => setTimeout(r, 2000));

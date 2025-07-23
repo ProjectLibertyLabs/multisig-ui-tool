@@ -30,7 +30,7 @@ test.beforeAll(async () => {
   const multiAddress = createKeyMulti(addresses, 2);
   multisigAddress = keyring.encodeAddress(multiAddress);
   console.log("Multisig address:", multisigAddress);
-  await api.tx.balances.transferKeepAlive(multiAddress, 100_000_000).signAndSend(testAccounts.alice);
+  await api.tx.balances.transferKeepAlive(multiAddress, 100_000_000).signAndSend(testAccounts.alice, { nonce: -1 });
 });
 
 test.afterAll(async () => {
