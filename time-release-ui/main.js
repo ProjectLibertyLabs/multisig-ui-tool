@@ -274,7 +274,7 @@ async function createTransfer(event) {
       const sortedOthers = multisigSignatories.filter((x) => x != sender).sort(multisigSort);
 
       const tx = api.tx.multisig.asMulti(multisigThreshold, sortedOthers, null, transferCall, maxWeight);
-      const nonce = await api.rpc.system.accountNextIndex(sender);
+      const nonce = (await api.rpc.system.accountNextIndex(sender)).toNumber();
       const sending = tx.signAndSend(sender, { signer: injector.signer, nonce }, postTransaction(txLabel, callHash));
       addLogData(callHash, {
         recipient,
@@ -299,7 +299,7 @@ async function createTransfer(event) {
       );
       await sending;
     } else {
-      const nonce = await api.rpc.system.accountNextIndex(sender);
+      const nonce = (await api.rpc.system.accountNextIndex(sender)).toNumber();
       const sending = transferCall.signAndSend(
         sender,
         { signer: injector.signer, nonce },

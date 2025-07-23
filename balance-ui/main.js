@@ -133,7 +133,7 @@ async function doStake(event, sender, stakeType, providerId, amount) {
     await web3Enable("Balance Check dApp");
     const stakeCall = getStakingCall(api, stakeType, providerId, amount);
     const injector = await web3FromAddress(sender);
-    const nonce = await api.rpc.system.accountNextIndex(sender);
+    const nonce = (await api.rpc.system.accountNextIndex(sender)).toNumber();
 
     const sending = stakeCall.signAndSend(
       sender,
@@ -166,7 +166,7 @@ async function doUnstake(event, sender, providerId, amount) {
     await web3Enable("Balance Check dApp");
     const stakeCall = api.tx.capacity.unstake(providerId, amount);
     const injector = await web3FromAddress(sender);
-    const nonce = await api.rpc.system.accountNextIndex(sender);
+    const nonce = (await api.rpc.system.accountNextIndex(sender)).toNumber();
 
     const sending = stakeCall.signAndSend(
       sender,
@@ -197,7 +197,7 @@ async function claim(event, sender) {
     await web3Enable("Balance Check dApp");
     const claimCall = api.tx.timeRelease.claim();
     const injector = await web3FromAddress(sender);
-    const nonce = await api.rpc.system.accountNextIndex(sender);
+    const nonce = (await api.rpc.system.accountNextIndex(sender)).toNumber();
 
     const sending = claimCall.signAndSend(
       sender,

@@ -256,7 +256,7 @@ async function signTransaction(section, sender, txHash, timepoint, callData, isC
   }
 
   try {
-    const nonce = await api.rpc.system.accountNextIndex(sender);
+    const nonce = (await api.rpc.system.accountNextIndex(sender)).toNumber();
     await tx.signAndSend(sender, { signer: injector.signer, nonce }, postTransaction(section));
   } catch (e) {
     postTransaction(section)(e.message);
