@@ -30,7 +30,7 @@ test.beforeAll(async () => {
   const multiAddress = createKeyMulti(addresses, 2);
   multisigAddress = keyring.encodeAddress(multiAddress);
   console.log("Multisig address:", multisigAddress);
-  const nonce = await api.rpc.system.accountNextIndex(testAccounts.alice);
+  const nonce = await api.rpc.system.accountNextIndex(testAccounts.alice.address);
   await api.tx.balances.transferKeepAlive(multiAddress, 100_000_000).signAndSend(testAccounts.alice, { nonce });
 });
 
