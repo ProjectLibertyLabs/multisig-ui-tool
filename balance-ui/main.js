@@ -133,10 +133,11 @@ async function doStake(event, sender, stakeType, providerId, amount) {
     await web3Enable("Balance Check dApp");
     const stakeCall = getStakingCall(api, stakeType, providerId, amount);
     const injector = await web3FromAddress(sender);
+    const nonce = await api.rpc.system.accountNextIndex(sender);
 
     const sending = stakeCall.signAndSend(
       sender,
-      { signer: injector.signer, nonce: -1 },
+      { signer: injector.signer, nonce },
       postTransaction(document.getElementById("staking-modal"), async () => {
         // Wait a bit before refreshing...
         await new Promise((r) => setTimeout(r, 2000));
@@ -165,10 +166,11 @@ async function doUnstake(event, sender, providerId, amount) {
     await web3Enable("Balance Check dApp");
     const stakeCall = api.tx.capacity.unstake(providerId, amount);
     const injector = await web3FromAddress(sender);
+    const nonce = await api.rpc.system.accountNextIndex(sender);
 
     const sending = stakeCall.signAndSend(
       sender,
-      { signer: injector.signer, nonce: -1 },
+      { signer: injector.signer, nonce },
       postTransaction(document.getElementById("unstaking-modal"), async () => {
         // Wait a bit before refreshing...
         await new Promise((r) => setTimeout(r, 6000));
@@ -195,10 +197,11 @@ async function claim(event, sender) {
     await web3Enable("Balance Check dApp");
     const claimCall = api.tx.timeRelease.claim();
     const injector = await web3FromAddress(sender);
+    const nonce = await api.rpc.system.accountNextIndex(sender);
 
     const sending = claimCall.signAndSend(
       sender,
-      { signer: injector.signer, nonce: -1 },
+      { signer: injector.signer, nonce },
       postTransaction(document.getElementById("timeReleaseSchedule"), async () => {
         // Wait a bit before refreshing...
         await new Promise((r) => setTimeout(r, 2000));
