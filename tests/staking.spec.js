@@ -35,7 +35,7 @@ test.beforeAll(async () => {
   if (maybeAliceMsaId.isSome) {
     aliceMsaId = maybeAliceMsaId.unwrap().toString();
   } else {
-    const nonce = await api.rpc.system.accountNextIndex(sender);
+    const nonce = await api.rpc.system.accountNextIndex(alice);
     await api.tx.msa.create().signAndSend(alice, { nonce });
     await new Promise((r) => setTimeout(r, 2000));
     aliceMsaId = (await api.query.msa.publicKeyToMsaId(alice.address)).unwrap().toString();
@@ -44,7 +44,7 @@ test.beforeAll(async () => {
   // Make Alice a Provider, if not already
   const providerRegistry = await api.query.msa.providerToRegistryEntry(aliceMsaId);
   if (providerRegistry.isNone) {
-    const nonce = await api.rpc.system.accountNextIndex(sender);
+    const nonce = await api.rpc.system.accountNextIndex(alice);
     await api.tx.msa.createProvider("Alice").signAndSend(alice, { nonce });
     await new Promise((r) => setTimeout(r, 2000));
   }
