@@ -145,7 +145,7 @@ export async function getCurrentRelayChainBlockNumber() {
 export function toDecimalUnit(balance) {
   const DECIMALS = getDecimals();
   // Some basic formatting of the bigint
-  balance = balance.toString();
+  balance = balance.toString().replaceAll(",", "");
   if (balance.length >= DECIMALS) {
     return `${BigInt(balance.slice(0, -DECIMALS)).toLocaleString()}.${balance.slice(-DECIMALS)}`;
   }
