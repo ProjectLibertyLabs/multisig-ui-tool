@@ -256,7 +256,7 @@ async function signTransaction(section, sender, txHash, timepoint, callData, isC
   }
 
   try {
-    await tx.signAndSend(sender, { signer: injector.signer }, postTransaction(section));
+    await tx.signAndSend(sender, { signer: injector.signer, nonce: -1 }, postTransaction(section));
   } catch (e) {
     postTransaction(section)(e.message);
   }

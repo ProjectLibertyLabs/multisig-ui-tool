@@ -274,7 +274,11 @@ async function createTransfer(event) {
       const sortedOthers = multisigSignatories.filter((x) => x != sender).sort(multisigSort);
 
       const tx = api.tx.multisig.asMulti(multisigThreshold, sortedOthers, null, transferCall, maxWeight);
-      const sending = tx.signAndSend(sender, { signer: injector.signer }, postTransaction(txLabel, callHash));
+      const sending = tx.signAndSend(
+        sender,
+        { signer: injector.signer, nonce: -1 },
+        postTransaction(txLabel, callHash),
+      );
       addLogData(callHash, {
         recipient,
         amount: amount.toLocaleString(),
@@ -298,7 +302,11 @@ async function createTransfer(event) {
       );
       await sending;
     } else {
-      const sending = transferCall.signAndSend(sender, { signer: injector.signer }, postTransaction(txLabel, callHash));
+      const sending = transferCall.signAndSend(
+        sender,
+        { signer: injector.signer, nonce: -1 },
+        postTransaction(txLabel, callHash),
+      );
       addLogData(callHash, {
         recipient,
         amount: amount.toLocaleString(),
