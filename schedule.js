@@ -37,7 +37,9 @@ export function displaySchedule(schedule, destination, relayBlockNumber) {
   scheduleEl.querySelector(".estimatedUnlock").innerHTML = unlockEstimate.toLocaleString();
 
   if (destination) {
-    scheduleEl.querySelector(".destination").innerHTML = destination;
+    const destHref = scheduleEl.querySelector(".destination-href");
+    destHref.innerHTML = destination;
+    destHref.href = `../balance-ui/?address=${destination}`;
   }
 
   return scheduleEl;
